@@ -1,0 +1,95 @@
+@use "sass:color";
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.login {
+  position: fixed; inset: 0; @include flex(row, center, center);
+  background: $color-bg; overflow: hidden;
+}
+
+.login__bg { position: absolute; inset: 0; pointer-events: none; }
+.login__bg-orb {
+  position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.12;
+  &--1 { width: 600px; height: 600px; background: $color-gold; top: -200px; right: -100px; animation: orbFloat 8s infinite; }
+  &--2 { width: 400px; height: 400px; background: $color-info; bottom: -100px; left: -100px; animation: orbFloat 10s infinite reverse; }
+}
+.login__bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba($color-border, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba($color-border, 0.4) 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(ellipse at center, transparent 20%, black 100%); }
+
+@keyframes orbFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-30px); } }
+
+.login__card {
+  position: relative; z-index: 10; width: 100%; max-width: 420px;
+  background: rgba($color-surface, 0.85); border: 1px solid rgba($color-border, 0.8);
+  border-radius: $radius-xl; padding: $spacing-xl; backdrop-filter: blur(20px);
+  box-shadow: 0 32px 64px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: $spacing-lg;
+}
+
+// ─── Tabs ───
+.login__tabs {
+  position: relative; display: flex; background: rgba(0, 0, 0, 0.2); padding: 4px; border-radius: 12px; border: 1px solid $color-border;
+}
+.login__tab {
+  position: relative; z-index: 2; flex: 1; padding: 12px; background: none; border: none;
+  color: rgba(255, 255, 255, 0.4); font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.3s;
+  &.active { color: #0c0c10 !important; }
+}
+.login__tab-cursor {
+  position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px);
+  background: $color-gold; border-radius: 9px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1;
+  &.phone { transform: translateX(0); }
+  &.email { transform: translateX(100%); }
+}
+
+// ─── Fields ───
+.login__form { display: flex; flex-direction: column; gap: $spacing-md; }
+.login__field {
+  display: flex; flex-direction: column; gap: $spacing-xs;
+  label { font-size: 12.5px; font-weight: 600; color: $color-text-muted; }
+  &.animate-field { animation: fieldSlideDown 0.3s ease-out; }
+}
+@keyframes fieldSlideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.login__input-wrap {
+  @include flex(row, center, flex-start); gap: $spacing-sm;
+  background: rgba($color-bg, 0.6); border: 1px solid $color-border; border-radius: $radius-sm;
+  padding: 0 $spacing-sm; min-height: 48px; transition: border-color 0.15s;
+  &:focus-within { border-color: rgba($color-gold, 0.5); }
+  input { flex: 1; background: none; border: none; color: $color-text; font-size: 14px; padding: 12px 0; &:focus { outline: none; } &::placeholder { color: rgba(255, 255, 255, 0.2); } }
+  .material-symbols-rounded { font-size: 20px; color: rgba(255, 255, 255, 0.3); }
+}
+
+.login__phone-container {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  .login__country-select {
+    position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05); border-radius: 8px; cursor: pointer; transition: 0.2s;
+    &:hover { background: rgba(255, 255, 255, 0.1); }
+    .code { font-size: 13px; font-weight: 700; color: $color-gold; }
+  }
+}
+
+.login__country-list {
+  position: absolute; top: calc(100% + 12px); left: -8px; width: 220px; max-height: 250px;
+  overflow-y: auto; background: #151518; border: 1px solid $color-border; border-radius: 12px;
+  z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.6); padding: 6px;
+  li {
+    display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; transition: 0.2s; cursor: pointer;
+    .f { font-size: 18px; } .n { font-size: 11px; color: $color-text-muted; flex: 1; } .c { font-size: 11px; font-weight: 700; color: $color-gold; }
+    &:hover { background: rgba($color-gold, 0.15); }
+    &.priority { border-left: 2px solid $color-gold; background: rgba($color-gold, 0.03); }
+  }
+  &::-webkit-scrollbar { width: 4px; } &::-webkit-scrollbar-thumb { background: $color-border; border-radius: 10px; }
+}
+
+.login__submit {
+  padding: 14px; background: $color-gold; color: #0C0C10; border: none; border-radius: $radius-sm;
+  font-weight: 700; cursor: pointer; margin-top: 10px;
+  &:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 0 20px rgba($color-gold, 0.3); }
+  &:disabled { opacity: 0.5; }
+}
+
+.login__divider { position: relative; text-align: center; margin: 15px 0; &::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: $color-border; } span { position: relative; background: #18181b; padding: 0 12px; font-size: 12px; color: $color-text-muted; } }
+.login__google-btn { @include flex(row, center, center); gap: 12px; padding: 12px; background: #fff; border-radius: $radius-sm; color: #000; font-weight: 600; border: none; cursor: pointer; img { width: 18px; } }
+.login__footer { text-align: center; font-size: 13px; color: $color-text-muted; button { background: none; border: none; color: $color-gold; font-weight: 700; cursor: pointer; } }
+.login__spinner { width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

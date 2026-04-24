@@ -1,0 +1,402 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.clients {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-md;
+  height: 100%;
+  transition: grid-template-columns 0.25s cubic-bezier(0.4,0,0.2,1);
+
+  &--with-panel {
+    grid-template-columns: 1fr 320px;
+  }
+}
+
+// ─── List panel ────────────────────────────────────────────────────────────────
+.clients__list-panel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  min-width: 0;
+}
+
+// ─── Toolbar ───────────────────────────────────────────────────────────────────
+.clients__toolbar {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.clients__search {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  flex: 1;
+  min-width: 200px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  padding: 0 $spacing-sm;
+  transition: border-color 0.15s;
+
+  &:focus-within {
+    border-color: rgba($color-gold, 0.4);
+  }
+
+  .material-symbols-rounded {
+    font-size: 18px;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: $color-text;
+    font-size: 13.5px;
+    padding: 9px 0;
+
+    &::placeholder { color: $color-text-muted; }
+  }
+}
+
+.clients__search-clear {
+  background: none;
+  color: $color-text-muted;
+  @include flex(row, center, center);
+  transition: color 0.15s;
+
+  &:hover { color: $color-text; }
+  .material-symbols-rounded { font-size: 16px; }
+}
+
+.clients__filters {
+  @include flex(row, center, flex-start);
+  gap: 4px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  padding: 4px;
+}
+
+.clients__filter-btn {
+  padding: 5px $spacing-sm;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: none;
+  color: $color-text-muted;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover { color: $color-text; }
+
+  &--active {
+    background: rgba($color-gold, 0.12);
+    color: $color-gold;
+  }
+}
+
+.clients__add-btn {
+  @include flex(row, center, center);
+  gap: $spacing-xs;
+  padding: 9px $spacing-md;
+  background: $color-gold;
+  color: #0C0C10;
+  border-radius: $radius-sm;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+
+  .material-symbols-rounded { font-size: 17px; }
+
+  &:hover {
+    background: $color-gold-light;
+    box-shadow: 0 0 16px rgba($color-gold, 0.3);
+  }
+}
+
+.clients__count {
+  font-size: 12px;
+  color: $color-text-muted;
+}
+
+// ─── Table ─────────────────────────────────────────────────────────────────────
+.clients__table-wrap {
+  @include card;
+  padding: 0;
+  overflow: hidden;
+}
+
+.clients__table {
+  width: 100%;
+  border-collapse: collapse;
+
+  thead tr {
+    border-bottom: 1px solid $color-border;
+  }
+
+  th {
+    padding: $spacing-sm $spacing-md;
+    font-size: 11px;
+    font-weight: 600;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba($color-border, 0.5);
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:last-child { border-bottom: none; }
+
+    &:hover { background: rgba($color-text, 0.03); }
+
+    &.active {
+      background: rgba($color-gold, 0.06);
+    }
+  }
+
+  td {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13.5px;
+    color: $color-text;
+    white-space: nowrap;
+  }
+}
+
+.clients__name-cell {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+}
+
+.clients__avatar {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  @include flex(row, center, center);
+  font-size: 12px;
+  font-weight: 700;
+  color: #0C0C10;
+
+  &--vip     { background: $color-gold; }
+  &--regular { background: $color-info; }
+  &--new     { background: $color-success; }
+}
+
+.clients__muted {
+  color: $color-text-muted !important;
+  font-size: 13px !important;
+}
+
+.clients__tag {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+
+  &--vip     { background: rgba($color-gold, 0.12);    color: $color-gold; }
+  &--regular { background: rgba($color-info, 0.12);    color: $color-info; }
+  &--new     { background: rgba($color-success, 0.12); color: $color-success; }
+}
+
+.clients__empty {
+  text-align: center !important;
+  padding: $spacing-xl !important;
+  color: $color-text-muted !important;
+
+  @include flex(column, center, center);
+  gap: $spacing-sm;
+
+  .material-symbols-rounded {
+    font-size: 32px;
+    display: block;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+// ─── Client card ───────────────────────────────────────────────────────────────
+.client-card {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+  animation: slideIn 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.client-card__header {
+  @include flex(row, center, space-between);
+}
+
+.client-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.client-card__close {
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-sm;
+  background: rgba($color-text, 0.05);
+  color: $color-text-muted;
+  @include flex(row, center, center);
+  transition: background 0.15s, color 0.15s;
+
+  &:hover { background: rgba($color-text, 0.1); color: $color-text; }
+  .material-symbols-rounded { font-size: 17px; }
+}
+
+.client-card__hero {
+  @include flex(row, center, flex-start);
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+}
+
+.client-card__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  @include flex(row, center, center);
+  font-size: 20px;
+  font-weight: 700;
+  color: #0C0C10;
+
+  &--vip     { background: $color-gold; box-shadow: 0 0 20px rgba($color-gold, 0.3); }
+  &--regular { background: $color-info; }
+  &--new     { background: $color-success; }
+}
+
+.client-card__hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.client-card__name {
+  font-size: 16px;
+  font-weight: 600;
+  color: $color-text;
+  letter-spacing: -0.2px;
+}
+
+.client-card__section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.client-card__section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.client-card__row {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  font-size: 13.5px;
+  color: $color-text;
+
+  .material-symbols-rounded {
+    font-size: 17px;
+    color: $color-text-muted;
+  }
+}
+
+.client-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.client-card__stat {
+  @include flex(column, center, center);
+  gap: 3px;
+  padding: $spacing-sm $spacing-xs;
+  background: rgba($color-text, 0.03);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  text-align: center;
+}
+
+.client-card__stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: $color-text;
+  letter-spacing: -0.3px;
+}
+
+.client-card__stat-label {
+  font-size: 10px;
+  color: $color-text-muted;
+}
+
+.client-card__notes {
+  width: 100%;
+  background: rgba($color-text, 0.03);
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  color: $color-text;
+  font-size: 13px;
+  padding: $spacing-sm;
+  resize: none;
+  transition: border-color 0.15s;
+  line-height: 1.5;
+
+  &::placeholder { color: $color-text-muted; }
+  &:focus { border-color: rgba($color-gold, 0.4); }
+}
+
+.client-card__actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: $spacing-sm;
+}
+
+.client-card__btn {
+  @include flex(row, center, center);
+  gap: $spacing-xs;
+  padding: 9px $spacing-sm;
+  border-radius: $radius-sm;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s, box-shadow 0.15s;
+
+  .material-symbols-rounded { font-size: 16px; }
+
+  &--primary {
+    background: $color-gold;
+    color: #0C0C10;
+    &:hover {
+      background: $color-gold-light;
+      box-shadow: 0 0 16px rgba($color-gold, 0.3);
+    }
+  }
+
+  &--secondary {
+    background: rgba($color-text, 0.06);
+    color: $color-text;
+    border: 1px solid $color-border;
+    &:hover { background: rgba($color-text, 0.1); }
+  }
+}

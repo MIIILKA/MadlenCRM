@@ -1,0 +1,56 @@
+@use 'variables' as *;
+
+@mixin flex($direction: row, $align: center, $justify: flex-start) {
+  display: flex;
+  flex-direction: $direction;
+  align-items: $align;
+  justify-content: $justify;
+}
+
+@mixin card {
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+}
+
+@mixin card-hover {
+  @include card;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  &:hover {
+    border-color: rgba($color-gold, 0.3);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: $color-border transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $color-border;
+    border-radius: 2px;
+  }
+}
+
+@mixin glass {
+  background: rgba($color-surface, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba($color-border, 0.6);
+}
+
+@mixin gold-glow {
+  box-shadow: 0 0 20px rgba($color-gold, 0.2);
+}

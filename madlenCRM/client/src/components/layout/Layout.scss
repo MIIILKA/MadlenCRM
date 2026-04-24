@@ -1,0 +1,401 @@
+@use "sass:color";
+
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+// ─── Layout Shell ──────────────────────────────────────────────────────────────
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: $color-bg;
+
+  --sidebar-w: #{$sidebar-width};
+
+  &--collapsed {
+    --sidebar-w: 68px;
+  }
+}
+
+// ─── Sidebar ───────────────────────────────────────────────────────────────────
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  height: 100vh;
+  background: $color-surface;
+  border-right: 1px solid $color-border;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+  min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+
+  // subtle top gradient accent
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, $color-gold, transparent);
+  }
+}
+
+// Logo
+.sidebar__logo {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  padding: $spacing-lg $spacing-md;
+  border-bottom: 1px solid $color-border;
+  min-height: 64px;
+  flex-shrink: 0;
+}
+
+.sidebar__logo-mark {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  background: linear-gradient(135deg, $color-gold, color.adjust($color-gold, $lightness: -15%, $space: hsl));
+  border-radius: $radius-sm;
+  @include flex(row, center, center);
+  box-shadow: 0 0 16px rgba($color-gold, 0.3);
+}
+
+.sidebar__logo-icon {
+  font-size: 16px;
+  color: #0F0F13;
+  font-weight: 700;
+}
+
+.sidebar__logo-text {
+  @include flex(row, baseline, flex-start);
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.sidebar__logo-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: $color-text;
+  letter-spacing: -0.3px;
+}
+
+.sidebar__logo-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: $color-gold;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+// Nav
+.sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: $spacing-md 0;
+  @include scrollbar-thin;
+
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.sidebar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.sidebar__group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: $color-text-muted;
+  padding: $spacing-xs $spacing-sm;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar__link {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  padding: 9px $spacing-sm;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  text-decoration: none;
+  position: relative;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba($color-text, 0.05);
+    color: $color-text;
+  }
+
+  &--active {
+    background: rgba($color-gold, 0.1);
+    color: $color-gold;
+
+    .sidebar__link-indicator {
+      opacity: 1;
+    }
+
+    .sidebar__link-icon {
+      color: $color-gold;
+    }
+  }
+}
+
+.sidebar__link-icon {
+  font-size: 20px;
+  min-width: 20px;
+  transition: color 0.15s;
+  font-variation-settings: 'wght' 300;
+}
+
+.sidebar__link-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar__link-indicator {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: $color-gold;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+// Footer
+.sidebar__footer {
+  border-top: 1px solid $color-border;
+  padding: $spacing-sm;
+  @include flex(row, center, space-between);
+  gap: $spacing-sm;
+  flex-shrink: 0;
+}
+.sidebar__login-btn {
+  width: 100%;
+  @include flex(row, center, center);
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba($color-gold, 0.1);
+  color: $color-gold;
+  border: 1px solid rgba($color-gold, 0.2);
+  border-radius: $radius-md;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-gold;
+    color: #000;
+  }
+}
+
+.sidebar__collapse-toggle {
+  background: transparent;
+  color: $color-text-muted;
+  padding: 5px;
+  border-radius: $radius-sm;
+  &:hover { background: rgba($color-text, 0.05); color: $color-text; }
+}
+.layout--collapsed {
+  .sidebar__footer {
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+}
+
+.sidebar__user {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  overflow: hidden;
+  flex: 1;
+}
+
+.sidebar__user-avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $color-gold, color.adjust($color-gold, $lightness: -20%, $space: hsl));
+  @include flex(row, center, center);
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F0F13;
+}
+
+.sidebar__user-info {
+  @include flex(column, flex-start, center);
+  overflow: hidden;
+}
+
+.sidebar__user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: $color-text;
+  @include truncate;
+}
+
+.sidebar__user-role {
+  font-size: 11px;
+  color: $color-text-muted;
+}
+
+.sidebar__collapse-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: $radius-sm;
+  border: 1px solid $color-border;
+  background: transparent;
+  color: $color-text-muted;
+  @include flex(row, center, center);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba($color-text, 0.08);
+    color: $color-text;
+  }
+
+  .material-symbols-rounded {
+    font-size: 18px;
+  }
+}
+
+// ─── Main Area ─────────────────────────────────────────────────────────────────
+.layout__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+// ─── Topbar ────────────────────────────────────────────────────────────────────
+.topbar {
+  height: 64px;
+  min-height: 64px;
+  @include flex(row, center, space-between);
+  padding: 0 $spacing-xl;
+  border-bottom: 1px solid $color-border;
+  background: rgba($color-bg, 0.8);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  gap: $spacing-md;
+}
+
+.topbar__left {
+  @include flex(row, center, flex-start);
+  gap: $spacing-md;
+}
+
+.topbar__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: $color-text;
+  letter-spacing: -0.3px;
+}
+
+.topbar__right {
+  @include flex(row, center, flex-end);
+  gap: $spacing-sm;
+}
+
+.topbar__btn {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  border: none;
+  background: transparent;
+  color: $color-text-muted;
+  @include flex(row, center, center);
+  position: relative;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: rgba($color-text, 0.06);
+    color: $color-text;
+  }
+
+  .material-symbols-rounded {
+    font-size: 20px;
+  }
+}
+
+.topbar__badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: $color-gold;
+  color: #0F0F13;
+  font-size: 9px;
+  font-weight: 700;
+  @include flex(row, center, center);
+  border: 2px solid $color-bg;
+}
+
+.topbar__divider {
+  width: 1px;
+  height: 24px;
+  background: $color-border;
+  margin: 0 $spacing-xs;
+}
+
+.topbar__profile {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  padding: 6px $spacing-sm;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba($color-text, 0.06);
+  }
+}
+
+.topbar__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $color-gold, color.adjust($color-gold, $lightness: -20%, $space: hsl));
+  @include flex(row, center, center);
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F0F13;
+}
+
+.topbar__profile-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.topbar__chevron {
+  font-size: 18px !important;
+  color: $color-text-muted;
+}
+
+// ─── Content ───────────────────────────────────────────────────────────────────
+.layout__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-xl;
+  @include scrollbar-thin;
+}

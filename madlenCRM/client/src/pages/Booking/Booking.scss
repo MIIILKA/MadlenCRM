@@ -1,0 +1,172 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+.booking-page {
+  padding: 60px 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  min-height: 100vh;
+  color: #fff;
+
+  .booking-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 60px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 60%;
+        width: 80%;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      &:last-child::after { display: none; }
+
+      .step-dot {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #111;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        z-index: 2;
+        transition: 0.4s;
+      }
+
+      span { font-size: 0.7rem; color: #444; text-transform: uppercase; letter-spacing: 2px; }
+
+      &.active {
+        .step-dot { border-color: $color-gold; color: $color-gold; box-shadow: 0 0 20px rgba($color-gold, 0.2); }
+        span { color: $color-gold; }
+      }
+
+      &.done {
+        .step-dot { background: $color-gold; border-color: $color-gold; color: #000; }
+        span { color: #fff; }
+      }
+    }
+  }
+
+  .booking-body {
+    @include glass;
+    padding: 50px;
+    border-radius: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    animation: fadeIn 0.5s ease-out;
+
+    h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 40px; text-align: center;
+      background: linear-gradient(to bottom, #fff, #888); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  }
+
+  // Специфічні сітки
+  .staff-pick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 25px;
+
+    .staff-pick-card {
+      @include glass;
+      padding: 30px;
+      border-radius: 25px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.3s;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+
+      &:hover { transform: translateY(-5px); border-color: rgba($color-gold, 0.4); }
+      &.selected { border-color: $color-gold; background: rgba($color-gold, 0.05); }
+
+      .staff-avatar {
+        width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 20px;
+        background: #000; border: 1px solid rgba($color-gold, 0.2); overflow: hidden;
+        display: flex; align-items: center; justify-content: center; font-size: 2rem;
+        img { width: 100%; height: 100%; object-fit: cover; }
+      }
+      h3 { margin-bottom: 5px; font-size: 1.2rem; }
+      span { color: $color-gold; font-size: 0.8rem; text-transform: uppercase; }
+    }
+  }
+
+  .calendar-wrap {
+    .cal-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+      button { background: none; border: 1px solid #222; color: #fff; padding: 10px 15px; border-radius: 10px; cursor: pointer; }
+      span { font-weight: 700; color: $color-gold; }
+    }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px;
+      .cal-day-name { text-align: center; font-size: 0.7rem; color: #444; padding-bottom: 10px; }
+      .cal-cell {
+        aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+        border-radius: 12px; cursor: pointer; border: 1px solid transparent;
+        &.past { opacity: 0.1; cursor: default; }
+        &.selected { background: $color-gold; color: #000; font-weight: 900; }
+        &:not(.past):hover:not(.selected) { background: rgba($color-gold, 0.1); border-color: rgba($color-gold, 0.3); }
+      }
+    }
+  }
+
+  .time-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    .time-slot {
+      background: #000; border: 1px solid #222; color: #fff; padding: 15px; border-radius: 12px;
+      cursor: pointer; transition: 0.2s;
+      &:hover { border-color: $color-gold; color: $color-gold; }
+      &.selected { background: $color-gold; color: #000; font-weight: 800; border-color: $color-gold; }
+      &.booked { opacity: 0.2; pointer-events: none; text-decoration: line-through; }
+    }
+  }
+
+  .confirm-card {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 25px;
+    padding: 30px;
+    margin-bottom: 30px;
+    .confirm-row {
+      display: flex; justify-content: space-between; padding: 15px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      &:last-child { border: none; }
+      span { color: #666; font-size: 0.9rem; }
+      strong { font-weight: 600; color: #fff; }
+    }
+  }
+
+  .comment-input {
+    width: 100%; background: #000; border: 1px solid #222; color: #fff;
+    padding: 20px; border-radius: 20px; min-height: 100px; outline: none;
+    margin-bottom: 30px; &:focus { border-color: $color-gold; }
+  }
+
+  .step-actions {
+    display: flex; gap: 20px; justify-content: center; margin-top: 40px;
+    button { padding: 18px 45px; border-radius: 18px; font-weight: 800; cursor: pointer; transition: 0.3s; }
+    .btn-gold { @include gold-glow; background: $color-gold; color: #000; border: none; }
+    .btn-outline { background: transparent; border: 1px solid #333; color: #888; &:hover { color: #fff; border-color: #fff; } }
+  }
+
+  .booking-success {
+    text-align: center; padding: 60px 20px;
+    .success-icon { font-size: 5rem; color: $color-gold; margin-bottom: 20px; animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    h2 { font-size: 3rem; font-weight: 900; margin-bottom: 15px; }
+    p { color: #888; margin-bottom: 40px; strong { color: #fff; } }
+  }
+
+  @keyframes scaleUp { from { transform: scale(0); } to { transform: scale(1); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+}

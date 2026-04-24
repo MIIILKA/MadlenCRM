@@ -1,0 +1,326 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  max-width: 1200px;
+}
+
+// ─── Head ──────────────────────────────────────────────────────────────────────
+.dashboard__head {
+  @include flex(row, center, space-between);
+}
+
+.dashboard__date {
+  font-size: 12px;
+  color: $color-text-muted;
+  text-transform: capitalize;
+  margin-bottom: 4px;
+}
+
+.dashboard__welcome {
+  font-size: 22px;
+  font-weight: 600;
+  color: $color-text;
+  letter-spacing: -0.4px;
+}
+
+.dashboard__new-btn {
+  @include flex(row, center, center);
+  gap: $spacing-xs;
+  padding: 9px $spacing-md;
+  background: $color-gold;
+  color: #0C0C10;
+  border-radius: $radius-sm;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: background 0.15s, box-shadow 0.15s;
+
+  .material-symbols-rounded { font-size: 18px; }
+
+  &:hover {
+    background: $color-gold-light;
+    box-shadow: 0 0 20px rgba($color-gold, 0.35);
+  }
+}
+
+// ─── Stats ─────────────────────────────────────────────────────────────────────
+.dashboard__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-md;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: rgba($color-gold, 0.25);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+  }
+}
+
+.stat-card__top {
+  @include flex(row, center, space-between);
+}
+
+.stat-card__label {
+  font-size: 12px;
+  color: $color-text-muted;
+  font-weight: 500;
+}
+
+.stat-card__icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  background: rgba($color-gold, 0.1);
+  @include flex(row, center, center);
+
+  .material-symbols-rounded {
+    font-size: 17px;
+    color: $color-gold;
+  }
+}
+
+.stat-card__value {
+  font-size: 26px;
+  font-weight: 700;
+  color: $color-text;
+  letter-spacing: -0.5px;
+}
+
+.stat-card__delta {
+  @include flex(row, center, flex-start);
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+
+  .material-symbols-rounded { font-size: 15px; }
+
+  &--up   { color: $color-success; }
+  &--down { color: $color-danger; }
+}
+
+// ─── Grid ──────────────────────────────────────────────────────────────────────
+.dashboard__grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: $spacing-md;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-card {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.dash-card__header {
+  @include flex(row, center, space-between);
+}
+
+.dash-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.dash-card__link {
+  font-size: 12px;
+  color: $color-gold;
+  background: none;
+  font-weight: 500;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 0.7; }
+}
+
+.dash-card__divider {
+  height: 1px;
+  background: $color-border;
+  margin: $spacing-xs 0;
+}
+
+// ─── Appointments ──────────────────────────────────────────────────────────────
+.appt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.appt-item {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  padding: 10px $spacing-sm;
+  border-radius: $radius-sm;
+  transition: background 0.15s;
+  cursor: pointer;
+
+  &:hover { background: rgba($color-text, 0.04); }
+
+  &--active {
+    background: rgba($color-gold, 0.06);
+    border: 1px solid rgba($color-gold, 0.15);
+  }
+}
+
+.appt-item__time {
+  font-size: 12px;
+  font-weight: 600;
+  color: $color-text-muted;
+  min-width: 40px;
+}
+
+.appt-item__dot {
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  border-radius: 50%;
+  background: $color-border;
+
+  .appt-item--done &    { background: $color-success; }
+  .appt-item--active &  { background: $color-gold; box-shadow: 0 0 8px rgba($color-gold, 0.5); }
+  .appt-item--upcoming &{ background: $color-border; }
+}
+
+.appt-item__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.appt-item__client {
+  font-size: 13px;
+  font-weight: 500;
+  color: $color-text;
+  @include truncate;
+}
+
+.appt-item__service {
+  font-size: 11px;
+  color: $color-text-muted;
+  @include truncate;
+}
+
+.appt-item__right {
+  @include flex(column, flex-end, center);
+  gap: 4px;
+}
+
+.appt-item__master {
+  font-size: 11px;
+  color: $color-text-muted;
+}
+
+.appt-item__badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+
+  &--done     { background: rgba($color-success, 0.12); color: $color-success; }
+  &--active   { background: rgba($color-gold, 0.15);    color: $color-gold; }
+  &--upcoming { background: rgba($color-text, 0.06);    color: $color-text-muted; }
+}
+
+// ─── Masters ───────────────────────────────────────────────────────────────────
+.masters-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.master-item {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+}
+
+.master-item__avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  @include flex(row, center, center);
+  font-size: 13px;
+  font-weight: 700;
+  color: #0C0C10;
+}
+
+.master-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.master-item__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.master-item__count {
+  font-size: 11px;
+  color: $color-text-muted;
+}
+
+.master-item__bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: $color-border;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.master-item__bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// ─── Quick stats ───────────────────────────────────────────────────────────────
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.quick-stat {
+  @include flex(column, flex-start, center);
+  gap: 3px;
+  padding: $spacing-sm;
+  background: rgba($color-text, 0.03);
+  border-radius: $radius-sm;
+  border: 1px solid $color-border;
+}
+
+.quick-stat__value {
+  font-size: 16px;
+  font-weight: 700;
+  color: $color-text;
+  letter-spacing: -0.3px;
+}
+
+.quick-stat__label {
+  font-size: 10px;
+  color: $color-text-muted;
+  font-weight: 500;
+}

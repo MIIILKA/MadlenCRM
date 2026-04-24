@@ -1,0 +1,137 @@
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
+
+.services-page {
+  background: #0a0a0a; color: #fff; padding-bottom: 80px;
+
+  .section-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 40px; &.center { text-align: center; } }
+
+  .services-hero {
+    height: 50vh; display: flex; align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(circle, rgba($color-gold, 0.1), transparent 70%);
+    h1 { font-size: 5rem; font-weight: 900; background: linear-gradient(to right, #fff, $color-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .admin-actions-hero { display: flex; gap: 10px; margin-top: 20px; justify-content: center;
+      button { background: none; border: 1px dashed rgba($color-gold, 0.5); color: $color-gold; padding: 8px 16px; border-radius: 8px; cursor: pointer; &:hover { background: $color-gold; color: #000; } }
+    }
+  }
+
+  // --- ФІКС МОДАЛЬНОГО ВІКНА ---
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85); // Темний фон
+    backdrop-filter: blur(8px); // Розмиття заднього плану
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; // Поверх усього
+    padding: 20px;
+  }
+
+  .modal-content {
+    background: #111;
+    border: 1px solid rgba($color-gold, 0.3);
+    padding: 40px;
+    border-radius: 35px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    animation: modalAppear 0.3s ease-out;
+
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;
+      h2 { color: $color-gold; margin: 0; }
+      .close-btn { background: none !important; border: none; color: #fff; cursor: pointer; font-size: 24px; &:hover { color: $color-gold; transform: rotate(90deg); transition: 0.3s; } }
+    }
+
+    form {
+      display: flex; flex-direction: column; gap: 15px;
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      input, textarea { background: #000; border: 1px solid #222; padding: 15px; color: #fff; border-radius: 15px; font-family: inherit; outline: none; &:focus { border-color: $color-gold; } }
+      textarea { min-height: 100px; resize: none; }
+      .submit-btn { background: $color-gold; color: #000; padding: 18px; border-radius: 15px; font-weight: 900; border: none; cursor: pointer; margin-top: 10px; &:hover { @include gold-glow; transform: translateY(-2px); } }
+    }
+  }
+
+  @keyframes modalAppear {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  // --- РЕШТА СТИЛІВ ---
+  .location-section {
+    padding: 80px 20px;
+    .location-container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1.5fr; gap: 40px; @media (max-width: 900px) { grid-template-columns: 1fr; } }
+    .location-info { @include glass; padding: 40px; border-radius: 30px;
+      .info-item { display: flex; gap: 20px; margin-bottom: 25px; span { color: $color-gold; font-size: 35px; } h3 { font-size: 0.8rem; color: #555; text-transform: uppercase; } p { font-size: 1.2rem; font-weight: 700; } }
+    }
+    .map-box { border-radius: 30px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); height: 400px; }
+  }
+
+  .staff-card {
+    @include glass; padding: 40px 30px; border-radius: 30px; text-align: center; width: 240px;
+    position: relative; transition: transform 0.4s;
+    &__avatar { width: 110px; height: 110px; border-radius: 50%; margin: 0 auto 20px; background: #111; overflow: hidden; border: 1px solid rgba($color-gold, 0.2); img { width: 100%; height: 100%; object-fit: cover; } }
+    .role { color: $color-gold; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px; }
+  }
+
+  .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 25px; margin-top: 40px; }
+  .service-card {
+    @include glass;
+    padding: 35px;
+    border-radius: 25px;
+    transition: 0.3s;
+    display: flex;
+    flex-direction: column; // Щоб контент розтягувався правильно
+
+    h3 {
+      font-size: 1.5rem;
+      margin-bottom: 30px;
+      min-height: 3.5rem; // Фіксована висота для вирівнювання кнопок
+      display: flex;
+      align-items: center;
+    }
+
+    .card-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 20px;
+      margin-top: auto; // Притискає футер до низу картки
+
+      .price {
+        font-size: 1.8rem;
+        font-weight: 900;
+        white-space: nowrap; // Ціна в один рядок
+      }
+    }
+
+    .book-btn {
+      position: relative; // Для стабільності кліку
+      z-index: 5;
+      border: 1px solid $color-gold;
+      color: $color-gold;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      background: transparent;
+      cursor: pointer;
+      transition: 0.3s;
+      pointer-events: auto; // Гарантує клікабельність
+
+      &:hover {
+        background: $color-gold;
+        color: #000;
+        box-shadow: 0 0 15px rgba($color-gold, 0.4);
+      }
+
+      &:active {
+        transform: scale(0.95); // Ефект натискання
+      }
+    }
+  }
+}
