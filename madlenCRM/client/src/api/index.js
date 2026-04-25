@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Створюємо інстанс axios з базовими налаштуваннями
 const api = axios.create({
-    baseURL: 'https://madlencrm-backend.onrender.com',
+    baseURL: 'https://madlencrm-backend.onrender.com/api',
     headers: {
         'Content-Type': 'application/json'
     }
