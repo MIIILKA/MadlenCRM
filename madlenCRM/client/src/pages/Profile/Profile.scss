@@ -252,3 +252,47 @@
   86% { transform: rotate(10deg); }
   88% { transform: rotate(-10deg); }
 }
+
+.push-subscribe-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #d4af37;
+
+  // Стан: ЩЕ НЕ ПІДПИСАНИЙ (Яскрава/Темна)
+  &.inactive {
+    background: #d4af37;
+    color: #1a1a1a;
+
+    span {
+      animation: bell-ring 4s infinite;
+    }
+
+    &:hover {
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+      transform: scale(1.02);
+    }
+  }
+
+  // Стан: ВЖЕ ПІДПИСАНИЙ (Світла/Спокійна)
+  &.active {
+    background: rgba(212, 175, 55, 0.1);
+    color: #d4af37;
+    cursor: default; // Показуємо, що дію вже виконано
+    opacity: 0.8;
+
+    span {
+      animation: none; // Дзвіночок вже не дрижить
+    }
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}

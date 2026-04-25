@@ -5,15 +5,27 @@ import { UserDashboard } from './components/UserDashboard';
 import { MasterDashboard } from './components/MasterDashboard';
 import './Profile.scss';
 
-export default function Profile({ subscribeToNotifications }) { // Отримуємо функцію як пропс
+export default function Profile({ subscribeToNotifications }) {
     const { user, logout } = useAuthStore();
     const [myAppointments, setMyAppointments] = useState([]);
+
+    // 1. ДОДАЄМО СТАН ДЛЯ ПЕРМІШЕНІВ
+    const [permission, setPermission] = useState(Notification.permission);
 
     useEffect(() => {
         if (user.role === 'user') {
             api.get('/appointments/my').then(res => setMyAppointments(res.data));
         }
     }, [user]);
+
+    // 2. ФУНКЦІЯ-ОБРОБНИК КЛІКУ
+    const handleSubscribe = async () => {
+        await subscribeToNotifications();
+        // Після того як функція відпрацює, оновлюємо стан, щоб кнопка "перефарбувалася"
+        setPermission(Notification.permission);
+    };
+
+    const isSubscribed = permission === 'granted';
 
     return (
         <div className="profile-page">
@@ -25,17 +37,17 @@ export default function Profile({ subscribeToNotifications }) { // Отриму�
                         <div className="profile-actions">
                             <span className="badge">{user.role}</span>
 
-                            {/* КНОПКА ДЛЯ ПІДПИСКИ НА PUSH */}
-                            {Notification.permission !== 'granted' && (
-                                <button
-                                    className="push-subscribe-btn"
-                                    onClick={subscribeToNotifications}
-                                    title="Нагадувати мені за 2 години до стрижки"
-                                >
-                                    <span className="material-symbols-rounded">notifications_active</span>
-                                    Увімкнути нагадування
-                                </button>
-                            )}
+                            {/* 3. ОНОВЛЕНА КНОПКА (ЗАВЖДИ ВИДИМА) */}
+                            <button
+                                className={`push-subscribe-btn ${isSubscribed ? 'active' : 'inactive'}`}
+                                onClick={handleSubscribe}
+                                disabled={isSubscribed}
+                            >
+                                <span className="material-symbols-rounded">
+                                    {isSubscribed ? 'notifications_active' : 'notifications_off'}
+                                </span>
+                                {isSubscribed ? 'Сповіщення увімкнено' : 'Увімкнути нагадування'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -43,7 +55,6 @@ export default function Profile({ subscribeToNotifications }) { // Отриму�
             </header>
 
             <div className="profile-content">
-                {/* ДИНАМІЧНИЙ РЕНДЕР ЗАЛЕЖНО ВІД РОЛІ */}
                 {user.role === 'user' && <UserDashboard appointments={myAppointments} />}
                 {user.role === 'master' && <MasterDashboard />}
                 {(user.role === 'admin' || user.role === 'owner') && (
