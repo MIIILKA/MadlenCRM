@@ -74,3 +74,65 @@
     transform: scale(1.02);
   }
 }
+
+// --- ADAPTIVE ADDITIONS FOR PROFILE ---
+
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 15px; // Мінімальні відступи від країв
+
+    .profile-header {
+      flex-direction: column; // Стекуємо аватар та інфо вертикально
+      align-items: center;
+      text-align: center;
+      padding: 25px;
+      gap: 20px;
+      border-radius: 24px;
+
+      .user-info {
+        flex-direction: column; // Аватар над іменем
+        gap: 15px;
+
+        .avatar.large {
+          width: 70px;
+          height: 70px;
+          font-size: 1.5rem;
+        }
+
+        h1 {
+          font-size: 1.5rem;
+        }
+      }
+
+      .logout-btn {
+        width: 100% !important; // Кнопка виходу на всю ширину для мобайлу
+        margin-top: 15px;
+        padding: 18px; // Зручно для великого пальця
+      }
+    }
+
+    .role-dashboard {
+      padding: 20px;
+      border-radius: 24px;
+
+      h3 {
+        font-size: 1.2rem;
+        text-align: center;
+      }
+    }
+
+    .app-card {
+      padding: 16px;
+      border-radius: 16px;
+
+      h4 { font-size: 1rem; }
+      span { font-size: 0.75rem; }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-page .profile-header .user-info h1 {
+    font-size: 1.3rem;
+  }
+}

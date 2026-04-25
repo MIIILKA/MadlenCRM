@@ -1,4 +1,4 @@
-// ─── Colors ───────────────────────────────────────────────────────────────────
+// ─── Colors (Твої без змін) ───────────────────────────────────────────────────
 $color-bg:         #0C0C10;
 $color-surface:    #13131A;
 $color-surface-2:  #1A1A24;
@@ -12,9 +12,16 @@ $color-danger:     #FF5C5C;
 $color-warning:    #F5A623;
 $color-info:       #5B8DEF;
 
+// ─── Breakpoints (Нове для адаптиву) ──────────────────────────────────────────
+$mobile:           480px;
+$tablet:           768px;
+$laptop:           1024px;
+$desktop:          1200px;
+
 // ─── Typography ───────────────────────────────────────────────────────────────
 $font-family:      'DM Sans', sans-serif;
-$font-size-base:   14px;
+$font-size-base:   14px; // База для ПК
+$font-size-mobile: 13px; // База для iPhone
 
 // ─── Spacing ──────────────────────────────────────────────────────────────────
 $spacing-xs: 4px;
@@ -31,3 +38,5 @@ $radius-xl:  24px;
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 $sidebar-width: 220px;
+$sidebar-collapsed-width: 68px;
+$header-height: 64px;

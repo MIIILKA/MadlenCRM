@@ -9,6 +9,7 @@
   height: 100vh;
   overflow: hidden;
   background: $color-bg;
+  position: relative; // Додано для мобільного позиціонування
 
   --sidebar-w: #{$sidebar-width};
 
@@ -27,12 +28,12 @@
   display: flex;
   flex-direction: column;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-  min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+  left 0.3s ease; // Додано для мобільного виїзду
   overflow: hidden;
   position: relative;
-  z-index: 10;
+  z-index: 100; // Піднято для перекриття на мобайлі
 
-  // subtle top gradient accent
   &::before {
     content: '';
     position: absolute;
@@ -213,7 +214,7 @@
   color: $color-text-muted;
   border-radius: $radius-sm;
   transition: background 0.15s, color 0.15s;
-  align-self: stretch;        // прибери flex-end
+  align-self: stretch;
   border-top: 1px solid $color-border;
   padding-top: $spacing-xs;
   margin-top: $spacing-xs;
@@ -473,5 +474,92 @@
   &:hover {
     background: rgba(255, 77, 77, 0.08);
     color: #ff4d4d;
+  }
+}
+
+// ==============================================================================
+// ─── ФІНАЛЬНА АДАПТИВНА ВЕРСТКА (ТІЛЬКИ ДОДАНО) ──────────────────────────────
+// ==============================================================================
+
+@media (max-width: 1024px) {
+  .layout {
+    &__overlay {
+      &.active {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 95;
+      }
+    }
+  }
+
+  .sidebar {
+    position: fixed;
+    left: calc(var(--sidebar-w) * -1); // Ховаємо за край екрана
+    top: 0;
+    bottom: 0;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    // Клас для відкриття шторки на мобайлі
+    &--mobile-open {
+      left: 0 !important;
+      box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+    }
+  }
+
+  .topbar {
+    padding: 0 $spacing-md;
+    height: 60px;
+    min-height: 60px;
+  }
+
+  .topbar__left {
+    .burger-btn {
+      display: flex !important; // Показуємо бургер тільки тут
+      background: none;
+      color: $color-gold;
+      cursor: pointer;
+    }
+  }
+
+  .layout__content {
+    padding: $spacing-md;
+    // Підтримка Safe Areas для iPhone
+    padding-bottom: calc($spacing-md + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar__profile-name,
+  .topbar__divider,
+  .topbar__chevron {
+    display: none !important; // Ховаємо зайве на малих екранах
+  }
+
+  .topbar__profile {
+    padding: 0;
+    background: none !important;
+  }
+
+  .sidebar {
+    --sidebar-w: 260px; // Робимо меню зручним для пальця
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar__title {
+    font-size: 15px;
+    max-width: 150px;
+    @include truncate;
+  }
+
+  .topbar__right {
+    gap: $spacing-xs;
+  }
+
+  .sidebar__logo {
+    padding: $spacing-md;
   }
 }

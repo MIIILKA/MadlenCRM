@@ -93,3 +93,52 @@
 .login__footer { text-align: center; font-size: 13px; color: $color-text-muted; button { background: none; border: none; color: $color-gold; font-weight: 700; cursor: pointer; } }
 .login__spinner { width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+// --- ADAPTIVE ADDITIONS FOR LOGIN ---
+
+@media (max-width: 480px) {
+  .login {
+    padding: 15px; // Щоб картка не впиралася в краї екрана
+    align-items: flex-start; // На дуже малих екранах краще зсунути вгору, щоб клавіатура не перекривала інпути
+    padding-top: 10vh;
+    overflow-y: auto;
+  }
+
+  .login__card {
+    padding: 24px; // Менші падінги для економії місця
+    gap: 20px;
+    border-radius: 24px;
+    max-width: 100%;
+    backdrop-filter: blur(15px); // Трохи менше розмиття для продуктивності
+  }
+
+  .login__tabs {
+    padding: 3px;
+    .login__tab {
+      padding: 10px;
+      font-size: 13px;
+    }
+  }
+
+  .login__input-wrap {
+    min-height: 52px; // Збільшена зона для дотику
+    input {
+      font-size: 16px !important; // ЗАБОРОНА автозуму в Safari iOS
+    }
+  }
+
+  .login__submit {
+    padding: 16px;
+    font-size: 15px;
+    margin-top: 5px;
+  }
+
+  .login__bg-orb--1 { width: 300px; height: 300px; } // Зменшуємо фонові ефекти для мобілок
+  .login__bg-orb--2 { width: 200px; height: 200px; }
+}
+
+@media (max-height: 700px) {
+  .login__card {
+    margin-top: 0;
+    gap: 15px;
+  }
+}

@@ -1,5 +1,10 @@
 @use 'variables' as *;
 
+// ─── Media Queries (Нове) ─────────────────────────────────────────────────────
+@mixin mobile { @media (max-width: #{$mobile}) { @content; } }
+@mixin tablet { @media (max-width: #{$tablet}) { @content; } }
+@mixin laptop { @media (max-width: #{$laptop}) { @content; } }
+
 @mixin flex($direction: row, $align: center, $justify: flex-start) {
   display: flex;
   flex-direction: $direction;
@@ -12,6 +17,10 @@
   border: 1px solid $color-border;
   border-radius: $radius-md;
   padding: $spacing-md;
+
+  @include mobile {
+    padding: $spacing-sm; // Авто-зменшення падінгів на мобайлі
+  }
 }
 
 @mixin card-hover {
@@ -48,9 +57,18 @@
 @mixin glass {
   background: rgba($color-surface, 0.7);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px); // Для коректного скла на iPhone
   border: 1px solid rgba($color-border, 0.6);
 }
 
 @mixin gold-glow {
   box-shadow: 0 0 20px rgba($color-gold, 0.2);
+}
+
+// ─── Touch Action (Нове) ──────────────────────────────────────────────────────
+@mixin touch-active {
+  &:active {
+    transform: scale(0.97); // Зворотній зв'язок при натисканні пальцем
+    transition: transform 0.1s;
+  }
 }

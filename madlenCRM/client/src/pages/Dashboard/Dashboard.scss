@@ -324,3 +324,62 @@
   color: $color-text-muted;
   font-weight: 500;
 }
+
+// --- АДАПТИВНІ КОРЕКТИВИ (ДОДАЙ У КІНЕЦЬ ФАЙЛУ) ---
+
+@media (max-width: 1024px) {
+  .services-page {
+    .services-hero h1 { font-size: 3.5rem; } // Зменшуємо гігантський текст
+  }
+}
+
+@media (max-width: 768px) {
+  .services-page {
+    padding-bottom: 40px;
+
+    .services-hero {
+      height: 40vh;
+      h1 { font-size: 2.5rem; } // Щоб не вилазило за краї на iPhone
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      padding: 0 15px;
+    }
+
+    // Картки стають по 1 в ряд для зручності
+    .services-grid {
+      grid-template-columns: 1fr !important;
+      padding: 15px;
+      gap: 15px;
+    }
+
+    .service-card {
+      padding: 20px;
+
+      .card-foot {
+        flex-direction: column; // Ціна і кнопка один під одним
+        gap: 15px;
+        align-items: flex-start;
+
+        .book-btn { width: 100%; text-align: center; } // Кнопка на всю ширину для пальця
+      }
+    }
+
+    // Локація: карта під інфою
+    .location-container {
+      grid-template-columns: 1fr !important;
+    }
+
+    // Модалка на весь екран для мобайлу
+    .modal-content {
+      width: 95%;
+      padding: 20px;
+      margin: 10px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .services-page .services-hero h1 { font-size: 2rem; }
+}

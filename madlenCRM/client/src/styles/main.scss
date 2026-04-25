@@ -13,12 +13,17 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent; // Прибирає сіру рамку при кліку на iOS
 }
 
 html {
   font-size: $font-size-base;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  @include tablet {
+    font-size: $font-size-mobile; // Глобальне зменшення всього через rem
+  }
 }
 
 body {
@@ -26,15 +31,35 @@ body {
   background: $color-bg;
   color: $color-text;
   line-height: 1.5;
-  overflow: hidden;
+  overflow-x: hidden; // Забороняємо горизонтальний свайп сторінки
+  overflow-y: auto;   // Дозволяємо вертикальний скрол
 }
 
 a       { color: inherit; text-decoration: none; }
-button  { cursor: pointer; font-family: inherit; border: none; outline: none; }
-input, textarea, select { font-family: inherit; outline: none; }
+button  {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  outline: none;
+  @include touch-active; // Всі кнопки тепер реагують на дотик
+}
+
+// ─── Critical iOS Fix ─────────────────────────────────────────────────────────
+input, textarea, select {
+  font-family: inherit;
+  outline: none;
+  font-size: 16px !important; // ЗАБОРОНЯЄ авто-наближення (zoom) в Safari
+}
+
 ul, ol  { list-style: none; }
 
 #root {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+// ─── Safe Areas (iPhone з вирізом) ────────────────────────────────────────────
+.layout__content {
+  padding-bottom: calc($spacing-xl + env(safe-area-inset-bottom)); //
 }
