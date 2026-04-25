@@ -132,3 +132,37 @@ exports.saveWorkHours = async (req, res) => {
         res.status(500).json({ message: 'Помилка збереження' });
     }
 };
+
+exports.getFinanceStats = async (req, res) => {
+    try {
+        const staffId = req.user.id;
+        const now = new Date();
+
+        // Отримуємо всі записи майстра, які НЕ скасовані
+        const appointments = await Appointment.find({
+            staff: staffId,
+            status: { $ne: 'cancelled' }
+        }).populate('service', 'price');
+
+        const stats = appointments.reduce((acc, app) => {
+            // Створюємо об'єкт дати запису для порівняння
+            // app.date (YYYY-MM-DD) + app.time (HH:mm)
+            const appointmentDate = new Date(`${app.date}T${app.time}`);
+
+            // Якщо час запису вже в минулому — рахуємо як заробіток
+            if (appointmentDate < now) {
+                acc.totalEarnings += (app.service?.price || 0);
+                acc.completedCount += 1;
+            } else {
+                // Якщо час ще не настав — це майбутній дохід
+                acc.upcomingEarnings += (app.service?.price || 0);
+                acc.pendingCount += 1;
+            }
+            return acc;
+        }, { totalEarnings: 0, completedCount: 0, upcomingEarnings: 0, pendingCount: 0 });
+
+        res.json(stats);
+    } catch (err) {
+        res.status(500).json({ message: "Помилка автоматичного розрахунку", error: err.message });
+    }
+};

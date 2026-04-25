@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+
 const cors = require('cors');
 const path = require('path');
 
@@ -10,8 +11,9 @@ const app = express();
 
 // 1. Мідлвари
 app.use(cors({
-    origin: ['https://madlencrm.netlify.app', 'http://localhost:3000'],
-    credentials: true
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 }));
 
 app.use(express.json());

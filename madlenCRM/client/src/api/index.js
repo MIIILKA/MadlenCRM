@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-// Створюємо інстанс axios з базовими налаштуваннями
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
 const api = axios.create({
-    baseURL: 'https://madlencrm-backend.onrender.com/api',
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    baseURL: isLocal
+        ? 'http://localhost:5000/api'
+        : 'https://madlencrm-backend.onrender.com/api',
+    withCredentials: true
 });
 
 // Перехоплювач запитів (Interceptors)

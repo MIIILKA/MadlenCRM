@@ -5,7 +5,7 @@ import { UserDashboard } from './components/UserDashboard';
 import { MasterDashboard } from './components/MasterDashboard';
 import './Profile.scss';
 
-export default function Profile() {
+export default function Profile({ subscribeToNotifications }) { // Отримуємо функцію як пропс
     const { user, logout } = useAuthStore();
     const [myAppointments, setMyAppointments] = useState([]);
 
@@ -22,7 +22,21 @@ export default function Profile() {
                     <div className="avatar large">{user.name.charAt(0)}</div>
                     <div>
                         <h1>{user.name}</h1>
-                        <span className="badge">{user.role}</span>
+                        <div className="profile-actions">
+                            <span className="badge">{user.role}</span>
+
+                            {/* КНОПКА ДЛЯ ПІДПИСКИ НА PUSH */}
+                            {Notification.permission !== 'granted' && (
+                                <button
+                                    className="push-subscribe-btn"
+                                    onClick={subscribeToNotifications}
+                                    title="Нагадувати мені за 2 години до стрижки"
+                                >
+                                    <span className="material-symbols-rounded">notifications_active</span>
+                                    Увімкнути нагадування
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <button className="logout-btn" onClick={logout}>Вийти</button>

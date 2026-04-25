@@ -135,14 +135,25 @@ function DyeingCalculator({ appointment, onClose }) {
 }
 
 // ── Фінансова панель ──────────────────────────────────────────────────────────
-function FinancePanel({ appointments }) {
+function FinancePanel({ appointments, backendStats }) {
     const [openMonth, setOpenMonth] = useState(null);
     const [openWeek, setOpenWeek]   = useState(null);
     const [openDay, setOpenDay]     = useState(null);
 
-    const completed = appointments.filter(a => a.status === 'confirmed' || a.status === 'completed');
-    const totalAll  = completed.reduce((s, a) => s + Number(a.service?.price || 0), 0);
-    const sum       = (apps) => apps.reduce((s, a) => s + Number(a.service?.price || 0), 0);
+    const now = new Date();
+
+    // Логіка "автоматичного" завершення: статус completed АБО час минув (і не скасовано)
+    const isActuallyCompleted = (a) => {
+        const appDate = new Date(`${a.date}T${a.time}`);
+        return a.status === 'completed' || (a.status !== 'cancelled' && appDate < now);
+    };
+
+    const completed = appointments.filter(isActuallyCompleted);
+
+    // Використовуємо суму з бекенда або рахуємо локально як запасний варіант
+    const totalAll = backendStats?.totalEarnings !== undefined ? backendStats.totalEarnings : completed.reduce((s, a) => s + Number(a.service?.price || 0), 0);
+
+    const sum = (apps) => apps.reduce((s, a) => s + Number(a.service?.price || 0), 0);
 
     const byMonth = completed.reduce((acc, a) => {
         const key = a.date?.slice(0, 7);
@@ -169,7 +180,7 @@ function FinancePanel({ appointments }) {
     return (
         <div className="finance-panel">
             <div className="finance-panel__total">
-                <span>Всього зароблено</span>
+                <span>Всього зароблено (автоматично)</span>
                 <span className="gold">{totalAll} ₴</span>
             </div>
 
@@ -194,7 +205,7 @@ function FinancePanel({ appointments }) {
                                             <span className="ftree-row__sum">{sum(wApps)} ₴</span>
                                         </button>
 
-                                        {wOpen && Object.entries(byDay(mApps)).sort((a,b) => b[0].localeCompare(a[0])).map(([dKey, dApps]) => {
+                                        {wOpen && Object.entries(byDay(wApps)).sort((a,b) => b[0].localeCompare(a[0])).map(([dKey, dApps]) => {
                                             const dOpen = openDay === dKey;
                                             return (
                                                 <div key={dKey} className="ftree-day">
@@ -233,6 +244,7 @@ function FinancePanel({ appointments }) {
 export const MasterDashboard = () => {
     const { user } = useAuthStore();
     const [appointments, setAppointments] = useState([]);
+    const [financeStats, setFinanceStats] = useState({ totalEarnings: 0 });
     const [loading, setLoading]           = useState(true);
     const [weekStart, setWeekStart]       = useState(() => getWeekStart(new Date()));
     const [showHours, setShowHours]       = useState(false);
@@ -242,9 +254,17 @@ export const MasterDashboard = () => {
     const [calcApp, setCalcApp]           = useState(null);
 
     useEffect(() => {
+        // 1. Завантаження записів майстра
         api.get('/appointments/master')
             .then(res => { setAppointments(res.data); setLoading(false); })
             .catch(() => setLoading(false));
+
+        // 2. Завантаження автоматичних фінансів
+        api.get('/appointments/finance/stats')
+            .then(res => { setFinanceStats(res.data); })
+            .catch(err => console.error("Фінанси недоступні:", err));
+
+        // 3. Завантаження робочих годин
         api.get('/appointments/staff/work-hours')
             .then(res => {
                 if (res.data && Object.keys(res.data).length) {
@@ -301,7 +321,7 @@ export const MasterDashboard = () => {
                         {showFinance ? 'expand_less' : 'expand_more'}
                     </span>
                 </button>
-                {showFinance && <FinancePanel appointments={appointments} />}
+                {showFinance && <FinancePanel appointments={appointments} backendStats={financeStats} />}
             </div>
 
             {/* Тижневий календар */}
@@ -342,10 +362,12 @@ export const MasterDashboard = () => {
                                     )}
                                     {dayApps.map(app => {
                                         const isDyeing = isDyeingService(app.service?.name);
+                                        const appPast = iso < today || (iso === today && app.time < new Date().toLocaleTimeString('uk-UA', {hour: '2-digit', minute:'2-digit'}));
+
                                         return (
                                             <div
                                                 key={app._id}
-                                                className={`cal-event status-${app.status} ${isDyeing ? 'cal-event--dyeing' : ''}`}
+                                                className={`cal-event status-${app.status} ${isDyeing ? 'cal-event--dyeing' : ''} ${appPast ? 'cal-event--completed-auto' : ''}`}
                                                 onClick={isDyeing ? () => setCalcApp(app) : undefined}
                                                 title={isDyeing ? 'Розрахувати вартість фарбування' : undefined}
                                             >
@@ -409,7 +431,6 @@ export const MasterDashboard = () => {
                 )}
             </div>
 
-            {/* СПИСОК ВАРІАНТІВ ЧАСУ */}
             <datalist id="hours-list">
                 {["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"].map(t => <option key={t} value={t}/>)}
             </datalist>

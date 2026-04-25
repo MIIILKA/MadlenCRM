@@ -6,6 +6,7 @@ const appointmentSchema = new mongoose.Schema({
     service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
     date: { type: String, required: true }, // Формат "YYYY-MM-DD"
     time: { type: String, required: true }, // Формат "HH:mm"
+    reminderSent: { type: Boolean, default: false },
     comment: { type: String },
     status: {
         type: String,

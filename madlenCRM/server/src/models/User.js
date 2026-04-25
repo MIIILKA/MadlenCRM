@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     phone: { type: String, unique: true, sparse: true, trim: true },
     password: { type: String, required: true },
+    pushSubscription: { type: Object, default: null },
     role: {
         type: String,
         enum: ["owner", "admin", "master", "receptionist", "user"],

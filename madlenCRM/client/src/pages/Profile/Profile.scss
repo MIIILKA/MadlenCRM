@@ -136,3 +136,119 @@
     font-size: 1.3rem;
   }
 }
+
+
+// Додай це у свій Profile.scss
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  .profile-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+}
+
+.push-subscribe-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(212, 175, 55, 0.1); // Прозорий золотистий
+  border: 1px solid #d4af37;
+  border-radius: 20px;
+  color: #d4af37;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  span {
+    font-size: 18px;
+    // Анімація дзвіночка
+    animation: ring 4s infinite;
+  }
+
+  &:hover {
+    background: #d4af37;
+    color: #1a1a1a;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Анімація легкого погойдування дзвіночка
+@keyframes ring {
+  0%, 90%, 100% { transform: rotate(0); }
+  92% { transform: rotate(15deg); }
+  94% { transform: rotate(-15deg); }
+  96% { transform: rotate(10deg); }
+  98% { transform: rotate(-10deg); }
+}
+
+// Адаптивність для мобілок (щоб кнопка не вилазила)
+@media (max-width: 480px) {
+  .user-info {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .profile-actions {
+      flex-wrap: wrap;
+    }
+  }
+
+  .push-subscribe-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.push-subscribe-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(212, 175, 55, 0.1); // Прозоре золото
+  border: 1px solid #d4af37;
+  border-radius: 30px;
+  color: #d4af37;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  span {
+    font-size: 18px;
+    animation: bell-ring 4s infinite;
+  }
+
+  &:hover {
+    background: #d4af37;
+    color: #1a1a1a;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+  }
+}
+
+@keyframes bell-ring {
+  0%, 80%, 100% { transform: rotate(0); }
+  82% { transform: rotate(15deg); }
+  84% { transform: rotate(-15deg); }
+  86% { transform: rotate(10deg); }
+  88% { transform: rotate(-10deg); }
+}
