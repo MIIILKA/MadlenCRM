@@ -9,7 +9,11 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const app = express();
 
 // 1. Мідлвари
-app.use(cors());
+app.use(cors({
+    origin: ['https://madlencrm.netlify.app', 'http://localhost:3000'],
+    credentials: true
+}));
+
 app.use(express.json());
 
 // 2. Статичні файли (для фото майстрів та інших завантажень)
