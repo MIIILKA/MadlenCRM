@@ -2,21 +2,18 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const sendReminders = require('./utils/pushReminders');
 
-// Стандартне завантаження (на сервері Render змінні беруться автоматично)
 require('dotenv').config();
 
 const app = express();
-
-// --- ДІАГНОСТИКА (додай це, щоб бачити помилку в логах Render) ---
-console.log("CORS ORIGIN:", process.env.CLIENT_URL);
 
 // 1. Мідлвари
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'] // Додай це для надійності
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
@@ -30,6 +27,12 @@ const dbURI = process.env.MONGODB_URI || process.env.MONGO_URI;
 mongoose.connect(dbURI)
     .then(() => {
         console.log('✅ MONGODB ПІДКЛЮЧЕНО!');
+
+        // ЗАПУСКАЄМО ПЕРЕВІРКУ (раз на 10 хв)
+        setInterval(() => {
+            console.log('--- ⏰ Запуск планової перевірки нагадувань ---');
+            sendReminders();
+        }, 10 * 60 * 1000);
     })
     .catch(err => {
         console.error('❌ ПОМИЛКА ПІДКЛЮЧЕННЯ:', err.message);
