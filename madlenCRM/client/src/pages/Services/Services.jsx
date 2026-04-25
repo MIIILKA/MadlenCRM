@@ -203,19 +203,21 @@ export default function Services() {
 
                     <div className="hero-actions">
 
-                        <button className="btn-primary" onClick={() => document.getElementById('price-list').scrollIntoView({behavior: 'smooth'})}>Прайс-лист</button>
 
-                        {isAdmin && (
 
                             <div className="admin-actions-hero">
+                                <button className="btn-primary" onClick={() => document.getElementById('price-list').scrollIntoView({behavior: 'smooth'})}>Прайс-лист</button>
+                                {isAdmin && (
+                                    <div>
+                                        <button onClick={() => openModal('service')}>+ Послуга</button>
 
-                                <button onClick={() => openModal('service')}>+ Послуга</button>
+                                        <button onClick={() => openModal('staff')}>+ Майстер</button>
+                                    </div>
 
-                                <button onClick={() => openModal('staff')}>+ Майстер</button>
+                                )}
 
                             </div>
 
-                        )}
 
                     </div>
 
