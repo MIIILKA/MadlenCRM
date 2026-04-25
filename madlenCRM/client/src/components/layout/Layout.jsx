@@ -16,7 +16,6 @@ export default function Layout() {
         { id: 'services',  label: 'Services',  icon: 'category', path: '/' },
         { id: 'staff',     label: 'Staff',     icon: 'badge', path: '/staff' },
         { id: 'finance',   label: 'Finance',   icon: 'payments', path: '/finance' },
-        // Додаємо профіль у загальний список для зручності
         { id: 'profile',   label: 'Profile',   icon: 'person', path: '/profile' },
     ]
 
@@ -60,16 +59,15 @@ export default function Layout() {
                 <div className="sidebar__footer">
                     {isAuthenticated && user ? (
                         <div className="sidebar__user-container">
-                            {/* Клікабельна зона профілю */}
                             <div
                                 className={`sidebar__user ${location.pathname === '/profile' ? 'sidebar__user--active' : ''}`}
                                 onClick={() => navigate('/profile')}
                             >
                                 <div
                                     className="sidebar__user-avatar"
-                                    style={{ background: ROLE_PERMISSIONS[user.role]?.color || '#ccc' }}
+                                    style={{ background: ROLE_PERMISSIONS[user.role]?.color || '#d4a373' }}
                                 >
-                                    {user.avatar || user.name?.charAt(0)}
+                                    {user.avatar ? <img src={`http://localhost:5000/${user.avatar}`} alt="av" /> : user.name?.charAt(0)}
                                 </div>
                                 {!collapsed && (
                                     <div className="sidebar__user-info">
@@ -77,20 +75,15 @@ export default function Layout() {
                                         <span className="sidebar__user-role">{ROLE_PERMISSIONS[user.role]?.label}</span>
                                     </div>
                                 )}
+
                             </div>
 
-                            {/* Окрема кнопка виходу з нормальним дизайном */}
-                            {!collapsed && (
-                                <button className="sidebar__logout-btn" onClick={logout}>
-                                    <span className="material-symbols-rounded">logout</span>
-                                    <span>Logout</span>
-                                </button>
-                            )}
+
                         </div>
                     ) : (
                         <button className="sidebar__login-btn" onClick={() => navigate('/login')}>
                             <span className="material-symbols-rounded">login</span>
-                            {!collapsed && <span>Sign In</span>}
+                            {!collapsed && <span>Увійти</span>}
                         </button>
                     )}
 
@@ -111,12 +104,8 @@ export default function Layout() {
                     </div>
                     <div className="topbar__right">
                         <div className="topbar__actions">
-                            <button className="topbar__btn">
-                                <span className="material-symbols-rounded">search</span>
-                            </button>
-                            <button className="topbar__btn" onClick={() => navigate('/profile')}>
-                                <span className="material-symbols-rounded">person</span>
-                            </button>
+                            <button className="topbar__btn"><span className="material-symbols-rounded">search</span></button>
+                            <button className="topbar__btn" onClick={() => navigate('/profile')}><span className="material-symbols-rounded">person</span></button>
                             <button className="topbar__btn">
                                 <span className="material-symbols-rounded">notifications</span>
                                 <div className="topbar__badge">2</div>

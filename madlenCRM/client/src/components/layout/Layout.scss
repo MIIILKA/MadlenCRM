@@ -178,11 +178,18 @@
 // Footer
 .sidebar__footer {
   border-top: 1px solid $color-border;
-  padding: $spacing-sm;
-  @include flex(row, center, space-between);
-  gap: $spacing-sm;
+  padding-bottom: $spacing-md;
+  @include flex(column, stretch, flex-end);
+  gap: $spacing-xs;
   flex-shrink: 0;
+
 }
+
+.sidebar__user-container {
+  @include flex(column, stretch, flex-start);
+  gap: $spacing-xs;
+}
+
 .sidebar__login-btn {
   width: 100%;
   @include flex(row, center, center);
@@ -204,14 +211,24 @@
 .sidebar__collapse-toggle {
   background: transparent;
   color: $color-text-muted;
-  padding: 5px;
   border-radius: $radius-sm;
+  transition: background 0.15s, color 0.15s;
+  align-self: stretch;        // прибери flex-end
+  border-top: 1px solid $color-border;
+  padding-top: $spacing-xs;
+  margin-top: $spacing-xs;
   &:hover { background: rgba($color-text, 0.05); color: $color-text; }
 }
+
 .layout--collapsed {
   .sidebar__footer {
-    flex-direction: column;
-    gap: $spacing-md;
+    align-items: center;
+  }
+  .sidebar__user-container {
+    align-items: center;
+  }
+  .sidebar__collapse-toggle {
+    align-self: center;
   }
 }
 
@@ -220,11 +237,25 @@
   gap: $spacing-sm;
   overflow: hidden;
   flex: 1;
-}
+  padding: $spacing-xs $spacing-xs;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background 0.15s;
 
+  &:hover {
+    background: rgba($color-text, 0.05);
+  }
+
+  &--active {
+    background: rgba($color-gold, 0.08);
+  }
+}
+.topbar__actions{
+  display: flex;
+  flex-direction: row;
+}
 .sidebar__user-avatar {
-  width: 32px;
-  height: 32px;
+  min-height: 32px;
   min-width: 32px;
   border-radius: 50%;
   background: linear-gradient(135deg, $color-gold, color.adjust($color-gold, $lightness: -20%, $space: hsl));
@@ -398,4 +429,49 @@
   overflow-y: auto;
   padding: $spacing-xl;
   @include scrollbar-thin;
+}
+
+.sidebar__logout-btn {
+  @include flex(row, center, flex-start);
+  gap: $spacing-sm;
+  width: 100%;
+  background: transparent;
+  color: $color-text-muted;
+  border: none;
+  padding: 7px $spacing-xs;
+  border-radius: $radius-sm;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  .material-symbols-rounded {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: rgba(255, 77, 77, 0.08);
+    color: #ff4d4d;
+  }
+}
+
+.sidebar__mini-btn {
+  width: 36px;
+  height: 36px;
+  @include flex(row, center, center);
+  background: transparent;
+  color: $color-text-muted;
+  border: none;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  .material-symbols-rounded {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: rgba(255, 77, 77, 0.08);
+    color: #ff4d4d;
+  }
 }

@@ -1,0 +1,136 @@
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
+
+
+.role-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.role-dashboard h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: $color-gold;
+  letter-spacing: -0.2px;
+}
+
+// ─── List ──────────────────────────────────────────────────────────────────────
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+// ─── Card ──────────────────────────────────────────────────────────────────────
+.app-card {
+  background: rgba($color-text, 0.03);
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    background: rgba($color-text, 0.05);
+    border-color: rgba($color-gold, 0.25);
+  }
+}
+
+// ─── Header ────────────────────────────────────────────────────────────────────
+.app-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  margin-bottom: 2px;
+}
+
+.date-badge {
+  font-size: 12px;
+  color: $color-text-muted;
+  font-weight: 400;
+  letter-spacing: 0.1px;
+}
+
+// ─── Status pill ───────────────────────────────────────────────────────────────
+.status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+
+  &.pending {
+    background: rgba(#f5a623, 0.12);
+    color: #f5a623;
+    border: 1px solid rgba(#f5a623, 0.25);
+  }
+
+  &.confirmed {
+    background: rgba(#4caf7d, 0.12);
+    color: #4caf7d;
+    border: 1px solid rgba(#4caf7d, 0.25);
+  }
+
+  &.cancelled {
+    background: rgba(#ff4d4d, 0.1);
+    color: #ff4d4d;
+    border: 1px solid rgba(#ff4d4d, 0.2);
+  }
+
+  &.completed {
+    background: rgba($color-text-muted, 0.1);
+    color: $color-text-muted;
+    border: 1px solid rgba($color-text-muted, 0.2);
+  }
+}
+
+// ─── Service name ──────────────────────────────────────────────────────────────
+.app-card strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: $color-text;
+}
+
+// ─── Footer ────────────────────────────────────────────────────────────────────
+.app-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+
+  p {
+    font-size: 12.5px;
+    color: $color-text-muted;
+    margin: 0;
+
+    span {
+      color: $color-text;
+      font-weight: 500;
+    }
+  }
+}
+
+.price-tag {
+  font-size: 13px;
+  font-weight: 600;
+  color: $color-gold;
+  background: rgba($color-gold, 0.08);
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba($color-gold, 0.2);
+}
+
+// ─── Empty state ───────────────────────────────────────────────────────────────
+.empty-state {
+  text-align: center;
+  padding: $spacing-xl $spacing-md;
+  color: $color-text-muted;
+  font-size: 13.5px;
+  border: 1px dashed $color-border;
+  border-radius: $radius-md;
+}

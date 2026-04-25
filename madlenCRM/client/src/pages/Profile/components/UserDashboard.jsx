@@ -1,3 +1,6 @@
+import './UserDashboard.scss'
+
+
 export const UserDashboard = ({ appointments }) => (
     <div className="role-dashboard">
         <h3>Мої візити</h3>

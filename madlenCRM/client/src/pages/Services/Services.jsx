@@ -325,68 +325,55 @@ export default function Services() {
 
 
 
+
             <section id="price-list" className="services-container">
-
                 <h2 className="section-title center">Послуги</h2>
-
                 <div className="services-grid">
+                    {/* ПЕРЕВІРКА: чи є дані та чи це масив */}
+                    {services && Array.isArray(services) && services.length > 0 ? (
+                        services.slice(0, visibleCount).map(s => {
+                            // ПЕРЕВІРКА: чи існує об'єкт послуги
+                            if (!s) return null; // Якщо 's' undefined, просто пропускаємо
 
-                    {services.slice(0, visibleCount).map(s => (
-
-                        <div key={s._id} className="service-card">
-
-                            <div className="card-head">
-
-                                <span className="cat">{s.category}</span>
-
-                                {isAdmin && (
-
-                                    <div className="admin-actions-inline">
-
-                                        <button onClick={() => openModal('service', s)}><span className="material-symbols-rounded">edit</span></button>
-
-                                        <button onClick={() => handleDelete('service', s._id)}><span className="material-symbols-rounded">delete</span></button>
-
+                            return (
+                                <div key={s._id} className="service-card">
+                                    <div className="card-head">
+                                        <span className="cat">{s.category}</span>
+                                        {isAdmin && (
+                                            <div className="admin-actions-inline">
+                                                <button onClick={() => openModal('service', s)}><span className="material-symbols-rounded">edit</span></button>
+                                                <button onClick={() => handleDelete('service', s._id)}><span className="material-symbols-rounded">delete</span></button>
+                                            </div>
+                                        )}
                                     </div>
-
-                                )}
-
-                            </div>
-
-                            <h3>{s.name}</h3>
-
-                            <div className="card-foot">
-
-                                <span className="price">{s.price} ₴</span>
-
-                                <button
-                                    type="button"
-                                    className="book-btn"
-                                    style={{ cursor: 'pointer', pointerEvents: 'auto' }} // Гарантуємо клікабельність
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleBooking(s);
-                                    }}
-                                >
-                                    Записатись
-                                </button>
-                            </div>
-
-                        </div>
-
-                    ))}
-
+                                    <h3>{s.name}</h3>
+                                    <div className="card-foot">
+                                        <span className="price">{s.price} ₴</span>
+                                        <button
+                                            type="button"
+                                            className="book-btn"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleBooking(s);
+                                            }}
+                                        >
+                                            Записатись
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        // Якщо послуг немає, показуємо заглушку
+                        <div className="no-services">Наразі немає доступних послуг</div>
+                    )}
                 </div>
 
                 {visibleCount < services.length && (
-
-                    <button className="load-more" onClick={() => setVisibleCount(v => v + 6)}>Показати ще</button>
-
+                    <button className="load-more btn-primary" onClick={() => setVisibleCount(v => v + 6)}>Показати ще</button>
                 )}
-
             </section>
-
 
 
             {showModal && (
