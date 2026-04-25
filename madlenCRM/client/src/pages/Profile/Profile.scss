@@ -48,3 +48,29 @@
     span { color: #555; font-size: 0.8rem; }
   }
 }
+.logout-btn {
+  background: linear-gradient(135deg, #D4AF37 0%, #e4c048 100%);
+  border-radius: 8px;
+  border: none;
+
+  // КЛЮЧОВІ ЗМІНИ:
+  width: fit-content;      // Кнопка буде лише такою завширшки, як текст усередині
+  padding: 16px 26px;       // Менші відступи, щоб була акуратною
+  margin-top: 10px;        // Відступ зверху від імені
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  color: #1a1a1a;
+  font-size: 12px;         // Трохи менший шрифт
+  font-weight: 700;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+
+  &:hover {
+    filter: brightness(1.1);
+    transform: scale(1.02);
+  }
+}

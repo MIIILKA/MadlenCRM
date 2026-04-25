@@ -4,8 +4,8 @@ import api from '../../api/';
 import { useAuthStore } from '../../store/authStore';
 import './Booking.scss';
 
-// Генерує слоти з кроком 60 хв (можна змінити на 30)
-function generateSlots(start, end) {
+// Точна генерація слотів з урахуванням тривалості послуги
+function generateSlots(start, end, durationMinutes = 60) {
     if (!start || !end) return [];
 
     const slots = [];
@@ -15,20 +15,20 @@ function generateSlots(start, end) {
     let cur = sh * 60 + sm;
     let endMin = eh * 60 + em;
 
-    if (endMin <= cur) {
-        endMin += 1440;
-    }
+    // Якщо робочий день закінчується після опівночі (напр. до 02:00)
+    if (endMin <= cur) endMin += 1440;
 
-    while (cur < endMin) {
+    const step = Number(durationMinutes) > 0 ? Number(durationMinutes) : 60;
+
+    // Важливо: слот додається тільки якщо послуга ВСТИГАЄ завершитися до кінця робочого дня
+    while (cur + step <= endMin) {
         const h = String(Math.floor(cur / 60) % 24).padStart(2, '0');
         const m = String(cur % 60).padStart(2, '0');
         slots.push(`${h}:${m}`);
-        cur += 60;
+        cur += step;
     }
     return slots;
 }
-
-const DEFAULT_SLOTS = generateSlots('10:00', '19:00');
 
 function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
 function getFirstDayOfMonth(year, month) { return new Date(year, month, 1).getDay(); }
@@ -67,27 +67,33 @@ export default function Booking() {
     }, []);
 
     useEffect(() => {
-        if (state?.service) setStep(2);
+        if (state?.service) {
+            setSelectedService(state.service);
+            setStep(2);
+        }
     }, [state]);
 
+    // Отримання слотів при зміні майстра або дати
     useEffect(() => {
         if (selectedStaff && selectedDate) {
             const dateStr = formatDate(selectedDate);
-            console.log("🔍 [DEBUG] ЗАПИТ СЛОТІВ ДЛЯ:", { staffId: selectedStaff._id, date: dateStr });
+            console.log(`📡 Запит слотів на ${dateStr} для майстра ${selectedStaff.name}`);
 
             api.get(`/appointments/slots?staffId=${selectedStaff._id}&date=${dateStr}`)
                 .then(r => {
-                    console.log("📥 [DEBUG] ВІДПОВІДЬ СЕРВЕРА:", r.data);
+                    console.log("📥 Отримано дані графіку:", r.data);
                     setBookedSlots(r.data.bookedSlots || []);
-                    if (r.data.workHours) {
-                        setWorkHours(r.data.workHours);
-                        console.log("🕒 [DEBUG] workHours ВСТАНОВЛЕНО:", r.data.workHours);
-                    }
+                    // Примусово оновлюємо workHours новими даними з бекенду
+                    setWorkHours(r.data.workHours);
                 })
-                .catch(err => console.error("❌ [DEBUG] ПОМИЛКА API:", err));
+                .catch(err => {
+                    console.error("Помилка завантаження слотів", err);
+                    setBookedSlots([]);
+                });
         }
     }, [selectedStaff, selectedDate]);
 
+    // Скидання при зміні майстра
     useEffect(() => {
         setSelectedDate(null);
         setSelectedTime(null);
@@ -106,29 +112,23 @@ export default function Booking() {
         return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
     };
 
-    // ПЕРЕВІРКА РОБОЧОГО ДНЯ
     const isWorkDay = (date, hours) => {
         if (!hours) return true;
-        const dayKey = String(date.getDay()); // JS Day (0-6)
-        const result = hours[dayKey]?.active === true;
-        return result;
+        const dayKey = String(date.getDay());
+        return hours[dayKey]?.active === true;
     };
 
-    // ДОСТУПНІ СЛОТИ
+    // Генерація слотів на основі отриманих workHours
     const availableSlots = (() => {
-        if (!selectedDate || !workHours) return [];
+        if (!selectedDate || !workHours || !selectedService) return [];
 
         const dayKey = String(selectedDate.getDay());
         const h = workHours[dayKey];
 
-        console.log(`⚙️ [DEBUG] Рендер дня ${dayKey}. Налаштування майстра:`, h);
+        if (!h || h.active === false) return [];
 
-        if (!h || h.active === false) {
-            return [];
-        }
-
-        const slots = generateSlots(h.start, h.end);
-        return slots;
+        console.log(`⚙️ Генеруємо слоти для дня ${dayKey} (${h.start} - ${h.end})`);
+        return generateSlots(h.start, h.end, selectedService.duration);
     })();
 
     const daysInMonth = getDaysInMonth(calYear, calMonth);
@@ -198,8 +198,6 @@ export default function Booking() {
             </div>
 
             <div className="booking-body">
-
-                {/* КРОК 1 — ПОСЛУГА */}
                 {step === 1 && (
                     <div className="booking-step">
                         <h2>Оберіть послугу</h2>
@@ -224,7 +222,6 @@ export default function Booking() {
                     </div>
                 )}
 
-                {/* КРОК 2 — МАЙСТЕР */}
                 {step === 2 && (
                     <div className="booking-step">
                         <h2>Оберіть майстра</h2>
@@ -252,7 +249,6 @@ export default function Booking() {
                     </div>
                 )}
 
-                {/* КРОК 3 — ДАТА І ЧАС */}
                 {step === 3 && (
                     <div className="booking-step step-datetime">
                         <div className="calendar-wrap">
@@ -289,45 +285,30 @@ export default function Booking() {
                                     })}
                                 </div>
                             </div>
-
-                            {/* Легенда */}
-                            {workHours && (
-                                <div className="cal-legend">
-                                    <span className="legend-item legend-item--off">вихідний</span>
-                                    <span className="legend-item legend-item--avail">робочий</span>
-                                </div>
-                            )}
                         </div>
 
                         <div className="time-wrap">
                             <h2>Оберіть час</h2>
+                            <p className="duration-hint">Тривалість послуги: <strong>{selectedService?.duration} хв</strong></p>
                             {!selectedDate ? (
                                 <p className="hint">Спочатку оберіть дату</p>
-                            ) : availableSlots.length === 0 ? (
-                                <p className="hint">Цей день — вихідний у майстра</p>
+                            ) : (availableSlots && availableSlots.length === 0) ? (
+                                <p className="hint">На жаль, вільних вікон немає</p>
                             ) : (
-                                <>
-                                    {workHours && selectedDate && (() => {
-                                        const h = workHours[String(selectedDate.getDay())];
-                                        return h?.active
-                                            ? <p className="work-hours-hint">Робочі години: {h.start} – {h.end}</p>
-                                            : null;
-                                    })()}
-                                    <div className="time-grid">
-                                        {availableSlots.map(t => {
-                                            const booked = bookedSlots.includes(t);
-                                            return (
-                                                <button key={t}
-                                                        className={`time-slot ${booked ? 'booked' : ''} ${selectedTime === t ? 'selected' : ''}`}
-                                                        disabled={booked}
-                                                        onClick={() => setSelectedTime(t)}
-                                                >
-                                                    {t}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </>
+                                <div className="time-grid">
+                                    {availableSlots.map(t => {
+                                        const booked = bookedSlots.includes(t);
+                                        return (
+                                            <button key={t}
+                                                    className={`time-slot ${booked ? 'booked' : ''} ${selectedTime === t ? 'selected' : ''}`}
+                                                    disabled={booked}
+                                                    onClick={() => setSelectedTime(t)}
+                                            >
+                                                {t}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
 
@@ -338,7 +319,6 @@ export default function Booking() {
                     </div>
                 )}
 
-                {/* КРОК 4 — ПІДТВЕРДЖЕННЯ */}
                 {step === 4 && (
                     <div className="booking-step">
                         <h2>Підтвердження запису</h2>

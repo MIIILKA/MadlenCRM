@@ -1,0 +1,44 @@
+.ios-prompt {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 350px;
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid #D4AF37; // Наш золотий колір
+  border-radius: 15px;
+  padding: 15px;
+  z-index: 9999;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  color: #fff;
+
+  &__content {
+    position: relative;
+    font-size: 14px;
+
+    p { margin-bottom: 10px; }
+    strong { color: #D4AF37; }
+  }
+
+  .instructions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+    color: #ccc;
+  }
+
+  // Стрілочка, що вказує вниз на кнопку Safari
+  &__arrow {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid #D4AF37;
+  }
+}

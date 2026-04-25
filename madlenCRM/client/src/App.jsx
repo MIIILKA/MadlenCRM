@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './store/authStore';
+import { InstallPrompt } from "./common/InstallPrompt/InstallPrompt.jsx";
+import { useAuthStore } from './store/authStore.js';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -7,12 +8,19 @@ import Clients from './pages/Clients/Clients';
 import Services from './pages/Services/Services';
 import Calendar from './pages/Calendar/Calendar';
 import Booking from './pages/Booking/Booking';
-import Profile from './pages/Profile/Profile'; // Імпортуємо нову сторінку профілю
+import Profile from './pages/Profile/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
+
 
 export default function App() {
     return (
         <BrowserRouter>
+            {/* InstallPrompt розміщуємо тут.
+                Він буде перевіряти пристрій один раз при завантаженні
+                і покажеться, якщо користувач зайшов з iPhone Safari.
+            */}
+            <InstallPrompt />
+
             <Routes>
                 {/* Логін окремим вікном без меню */}
                 <Route path="/login" element={<Login />} />
@@ -29,7 +37,7 @@ export default function App() {
                         </ProtectedRoute>
                     } />
 
-                    {/* Особистий кабінет (Профіль) — тут логіка розділення функцій */}
+                    {/* Особистий кабінет (Профіль) */}
                     <Route path="profile" element={
                         <ProtectedRoute page="profile">
                             <Profile />

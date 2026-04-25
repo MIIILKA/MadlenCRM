@@ -104,15 +104,31 @@ exports.getWorkHours = async (req, res) => {
 // 6. Робочі години: Зберегти
 exports.saveWorkHours = async (req, res) => {
     try {
-        // Використовуємо $set, щоб Mongoose не ігнорував оновлення об'єкта
-        await Staff.findByIdAndUpdate(
-            req.user.id,
-            { $set: { workHours: req.body } },
-            { new: true, upsert: true }
-        );
+        const staffId = req.user.id;
+        const newHours = req.body;
+
+        console.log(`📥 Отримано нові години для майстра ${staffId}:`, newHours);
+
+        // 1. Знаходимо майстра
+        const staffMember = await Staff.findById(staffId);
+
+        if (!staffMember) {
+            return res.status(404).json({ message: 'Майстра не знайдено' });
+        }
+
+        // 2. Перезаписуємо об'єкт годин
+        staffMember.workHours = newHours;
+
+        // 3. ВАЖЛИВО: Помічаємо поле як змінене (для типу Object це обов'язково)
+        staffMember.markModified('workHours');
+
+        // 4. Зберігаємо
+        await staffMember.save();
+
+        console.log("✅ Години успішно оновлені в БД");
         res.json({ ok: true });
     } catch (err) {
-        console.error("Save error:", err);
+        console.error("❌ Помилка при збереженні годин:", err);
         res.status(500).json({ message: 'Помилка збереження' });
     }
 };

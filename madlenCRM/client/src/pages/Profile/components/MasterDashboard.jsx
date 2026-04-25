@@ -245,7 +245,7 @@ export const MasterDashboard = () => {
         api.get('/appointments/master')
             .then(res => { setAppointments(res.data); setLoading(false); })
             .catch(() => setLoading(false));
-        api.get('/staff/work-hours')
+        api.get('/appointments/staff/work-hours')
             .then(res => {
                 if (res.data && Object.keys(res.data).length) {
                     const normalized = {};
@@ -270,7 +270,7 @@ export const MasterDashboard = () => {
         setWorkHours(prev => ({ ...prev, [String(dayIndex)]: { ...prev[String(dayIndex)], [field]: value } }));
 
     const handleSaveHours = async () => {
-        try { await api.post('/staff/work-hours', workHours); } catch {}
+        try { await api.post('/appointments/staff/work-hours', workHours); } catch {}
         setHoursSaved(true);
         setTimeout(() => setHoursSaved(false), 2500);
     };
