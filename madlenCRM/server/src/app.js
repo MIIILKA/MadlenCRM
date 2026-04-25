@@ -32,7 +32,7 @@ mongoose.connect(dbURI)
         setInterval(() => {
             console.log('--- ⏰ Запуск планової перевірки нагадувань ---');
             sendReminders();
-        }, 10 * 60 * 1000);
+        }, 5 * 60 * 1000);
     })
     .catch(err => {
         console.error('❌ ПОМИЛКА ПІДКЛЮЧЕННЯ:', err.message);
