@@ -9,8 +9,10 @@ export default function Profile({ subscribeToNotifications }) {
     const { user, logout } = useAuthStore();
     const [myAppointments, setMyAppointments] = useState([]);
 
-    // 1. ДОДАЄМО СТАН ДЛЯ ПЕРМІШЕНІВ
+    // Стан для пермішенів та додатковий прапорець для відписки
     const [permission, setPermission] = useState(Notification.permission);
+    // Додаємо цей стан, щоб кнопка реагувала на відписку, навіть якщо браузер каже 'granted'
+    const [isActuallySubscribed, setIsActuallySubscribed] = useState(Notification.permission === 'granted');
 
     useEffect(() => {
         if (user.role === 'user') {
@@ -18,14 +20,36 @@ export default function Profile({ subscribeToNotifications }) {
         }
     }, [user]);
 
-    // 2. ФУНКЦІЯ-ОБРОБНИК КЛІКУ
-    const handleSubscribe = async () => {
-        await subscribeToNotifications();
-        // Після того як функція відпрацює, оновлюємо стан, щоб кнопка "перефарбувалася"
-        setPermission(Notification.permission);
+    // ВИПРАВЛЕНА ФУНКЦІЯ: тепер вона і вмикає, і вимикає
+    const handleTogglePush = async () => {
+        if (isActuallySubscribed) {
+            // Логіка відписки (видаляємо з БД)
+            try {
+                await api.post('/auth/unsubscribe');
+                // Міняємо локальний стан, бо браузер не дасть скинути 'granted'
+                setIsActuallySubscribed(false);
+                alert("Ви відписалися від сповіщень. Ми більше не будемо вас турбувати.");
+            } catch (err) {
+                console.error("Помилка при відписці", err);
+            }
+        } else {
+            // Логіка підписки
+            await subscribeToNotifications();
+            setPermission(Notification.permission);
+            if (Notification.permission === 'granted') {
+                setIsActuallySubscribed(true);
+            }
+        }
     };
 
-    const isSubscribed = permission === 'granted';
+    // Залишаємо цю функцію, як ти просив, але використовувати будемо handleTogglePush
+    const handleSubscribe = async () => {
+        await subscribeToNotifications();
+        setPermission(Notification.permission);
+        if (Notification.permission === 'granted') {
+            setIsActuallySubscribed(true);
+        }
+    };
 
     return (
         <div className="profile-page">
@@ -37,16 +61,15 @@ export default function Profile({ subscribeToNotifications }) {
                         <div className="profile-actions">
                             <span className="badge">{user.role}</span>
 
-                            {/* 3. ОНОВЛЕНА КНОПКА (ЗАВЖДИ ВИДИМА) */}
+                            {/* ВИПРАВЛЕНА КНОПКА: прибрали disabled, змінили onClick */}
                             <button
-                                className={`push-subscribe-btn ${isSubscribed ? 'active' : 'inactive'}`}
-                                onClick={handleSubscribe}
-                                disabled={isSubscribed}
+                                className={`push-subscribe-btn ${isActuallySubscribed ? 'active' : 'inactive'}`}
+                                onClick={handleTogglePush}
                             >
                                 <span className="material-symbols-rounded">
-                                    {isSubscribed ? 'notifications_active' : 'notifications_off'}
+                                    {isActuallySubscribed ? 'notifications_active' : 'notifications_off'}
                                 </span>
-                                {isSubscribed ? 'Сповіщення увімкнено' : 'Увімкнути нагадування'}
+                                {isActuallySubscribed ? 'Сповіщення увімкнено' : 'Увімкнути нагадування'}
                             </button>
                         </div>
                     </div>
