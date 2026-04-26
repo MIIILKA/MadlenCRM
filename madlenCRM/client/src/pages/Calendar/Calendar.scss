@@ -1,0 +1,715 @@
+:root {
+  // Основні акценти
+  --color-gold: #D4AF37;
+  --color-bg-main: #0c0c0c;
+  --color-bg-darker: #111111;
+  --color-border: #2a2a2a;
+
+  // Кольори для тексту
+  --color-text-bright: #eeeeee;
+  --color-text-dim: #888888;
+  --color-text-dark: #000000;
+
+  // ЛІНІЯ ЧАСУ (Твоє золото)
+  --color-now-line: var(--color-gold);
+
+  // КАРТКИ ЗАПИСІВ (Налаштування, які ти хотів)
+  --color-bg-card-soft: #222222; // Сіріший фон
+  --color-border-light: #333333;
+  --color-border-width: 5px;     // Товщина кольорового бордера
+
+  // КАТЕГОРІЇ (Кольори бордерів)
+  --color-haircut: #D4AF37;     // Жовтий
+  --color-dyeing: #8e7cc3;      // Лавандовий
+  --color-makeup: #76a5af;      // Морська хвиля
+  --color-manicure: #c27ba0;    // Попеляста троянда
+
+  // Функціональні
+  --color-drag-hint: rgba(212, 175, 55, 0.2);
+  --shadow-main: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+
+.altegio-clean {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0c0c0c;
+  color: #eee;
+  font-family: 'Inter', sans-serif;
+
+
+  // ─── ХЕДЕР ───────────────────────────────────────────────
+  .cal-header {
+    padding: 10px 20px;
+    background: #111;
+    border-bottom: 1px solid #2a2a2a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+
+    .left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .week-btns {
+      display: flex;
+      gap: 4px;
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 4px;
+
+      .day-btn {
+        background: transparent;
+        border: none;
+        border-radius: 7px;
+        padding: 5px 11px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+
+        .dow {
+          font-size: 0.55rem;
+          color: #555;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .num {
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: #888;
+          line-height: 1.2;
+        }
+
+        &.today .num { color: #D4AF37; }
+
+        &.active {
+          background: #D4AF37;
+          .dow { color: #6b5500; }
+          .num { color: #000; }
+        }
+
+        &:hover:not(.active) {
+          background: #222;
+          .num { color: #ccc; }
+        }
+      }
+    }
+
+    .today-btn {
+      background: #D4AF37;
+      border: none;
+      color: #000;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: opacity 0.15s;
+      &:hover { opacity: 0.85; }
+    }
+  }
+
+  // ─── КАСТОМНИЙ ДАТПІКЕР ──────────────────────────────────
+  .custom-datepicker-wrap {
+    position: relative;
+
+    .date-display {
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      color: #ccc;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: border-color 0.15s;
+      white-space: nowrap;
+
+      .cal-icon { font-size: 0.9rem; }
+
+      &:hover { border-color: #D4AF37; color: #fff; }
+    }
+
+    .date-picker-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      z-index: 999;
+      background: #151515;
+      border: 1px solid #2f2f2f;
+      border-radius: 12px;
+      padding: 14px;
+      width: 240px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+
+      .picker-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+
+        span {
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #ddd;
+        }
+
+        button {
+          background: #222;
+          border: 1px solid #333;
+          color: #aaa;
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: border-color 0.15s;
+          &:hover { border-color: #D4AF37; color: #fff; }
+        }
+      }
+
+      .picker-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+
+        .picker-dayname {
+          text-align: center;
+          font-size: 0.6rem;
+          color: #444;
+          font-weight: 700;
+          text-transform: uppercase;
+          padding: 3px 0;
+        }
+
+        .picker-day {
+          text-align: center;
+          font-size: 0.75rem;
+          color: #888;
+          padding: 5px 2px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.12s, color 0.12s;
+
+          &:hover { background: #252525; color: #fff; }
+
+          &.today {
+            color: #D4AF37;
+            font-weight: 700;
+          }
+
+          &.selected {
+            background: #D4AF37;
+            color: #000;
+            font-weight: 700;
+          }
+        }
+      }
+    }
+  }
+
+  // ─── VIEWPORT ─────────────────────────────────────────────
+  .viewport {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  // ─── ВІСЬ ЧАСУ ────────────────────────────────────────────
+  .time-axis {
+    width: 58px;
+    background: #0e0e0e;
+    border-right: 1px solid #1d1d1d;
+    position: sticky;
+    left: 0;
+    z-index: 100;
+    flex-shrink: 0;
+
+    .corner {
+      height: 60px;
+      border-bottom: 1px solid #2a2a2a;
+      background: #111;
+    }
+
+    .t-slot {
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      border-bottom: 1px solid #141414;
+      box-sizing: border-box;
+
+      &.hour {
+        align-items: flex-start;
+        padding-top: 5px;
+        b {
+          color: #555;
+          font-size: 0.72rem;
+          font-weight: 600;
+          sup { font-size: 0.5rem; vertical-align: super; color: #3a3a3a; }
+        }
+      }
+
+      &.min {
+        align-items: center;
+        i { color: #1e1e1e; font-style: normal; font-size: 0.65rem; }
+      }
+    }
+  }
+
+  // ─── КОЛОНКИ МАЙСТРІВ ─────────────────────────────────────
+  .masters-container {
+    display: grid;
+    flex: 1;
+  }
+
+  .m-column {
+    border-right: 1px solid #1a1a1a;
+    display: flex;
+    flex-direction: column;
+
+    .m-head {
+      height: 60px;
+      background: #111;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 10px;
+      border-bottom: 1px solid #2a2a2a;
+
+      .avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1.5px solid #2a2a2a;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1e1e1e;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #D4AF37;
+        flex-shrink: 0;
+        img { width: 100%; height: 100%; object-fit: cover; }
+      }
+
+      .info {
+        .name { font-weight: 700; font-size: 0.82rem; display: block; color: #eee; }
+        .role { font-size: 0.62rem; color: #D4AF37; letter-spacing: 0.05em; text-transform: uppercase; }
+      }
+    }
+
+    .slots {
+
+      position: relative;
+      min-height: 1950px; // (21-9 години) * 3 слоти на годину * 50px
+      flex: 1;
+    }
+  }
+
+  // ─── КЛІТИНКИ ─────────────────────────────────────────────
+  .cell {
+    position: relative;
+    z-index: 1;
+    height: 50px;
+    border-bottom: 1px solid #141414;
+    box-sizing: border-box;
+
+    .plus-hint {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    &:hover .plus-hint { display: flex; background: rgba(255, 255, 255, 0.02); }
+    &.drag-over {
+      background: rgba(212, 175, 55, 0.2) !important;
+      border: 1px dashed #D4AF37;
+    }
+  }
+  // ─── КАРТКА ЗАПИСУ ─────────────────────────────────────
+  // ─── КАРТКА ЗАПИСУ ─────────────────────────────────────
+  // ─── КАРТКА ЗАПИСУ ────────────────────────────────────────
+  // ─── КАРТКА ЗАПИСУ ────────────────────────────────────────
+  .app-row {
+    position: absolute;
+    background-color: var(--color-bg-card-soft);
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: var(--color-border-light);
+    border-right-width: 1px;
+    border-right-style: solid;
+    border-right-color: var(--color-border-light);
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+    border-bottom-color: var(--color-border-light);
+    border-left-width: var(--color-border-width);
+    border-left-style: solid;
+    border-left-color: var(--color-gold);
+    border-radius: 6px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 12px;
+    padding-right: 12px;
+    z-index: 5;
+    transition-property: all;
+    transition-duration: 0.2s;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+    box-sizing: border-box;
+
+    .app-time-tag {
+      color: #ffffff; // ТУТ: тепер час за замовчуванням білий
+      font-weight: 800;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      transition: color 0.2s ease;
+    }
+
+    .app-client-name {
+      color: var(--color-text-bright);
+      font-weight: 700;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-service-name {
+      color: var(--color-text-dim);
+      font-size: 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.6;
+    }
+
+    // ДИНАМІЧНІ КОЛЬОРИ (Бордер + Час в колір бордера)
+    &.haircut {
+      border-left-color: var(--color-haircut) !important;
+      .app-time-tag { color: var(--color-haircut); }
+    }
+
+    &.dyeing {
+      border-left-color: var(--color-dyeing) !important;
+      .app-time-tag { color: var(--color-dyeing); }
+    }
+
+    &.makeup {
+      border-left-color: var(--color-makeup) !important;
+      .app-time-tag { color: var(--color-makeup); }
+    }
+
+    &.manicure {
+      border-left-color: var(--color-manicure) !important;
+      .app-time-tag { color: var(--color-manicure); }
+    }
+
+    &.other {
+      border-left-color: var(--color-gold);
+      .app-time-tag { color: var(--color-gold); }
+    }
+
+    &:hover {
+      filter: brightness(1.2);
+      transform: translateY(-1px);
+      z-index: 100 !important;
+      box-shadow: var(--shadow-main);
+    }
+  }
+  // ─── ЛІНІЯ ПОТОЧНОГО ЧАСУ ────────────────────────────────
+  .now-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-now-line);
+    z-index: 100;
+    pointer-events: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      top: -4px;
+      width: 10px;
+      height: 10px;
+      background: var(--color-now-line);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(255, 77, 77, 0.6);
+    }
+  }
+}
+  // ─── МОДАЛКА СТВОРЕННЯ ────────────────────────────────────
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(6px);
+  }
+
+  .admin-modal {
+    background: #141414;
+    padding: 24px;
+    border-radius: 14px;
+    border: 1px solid #2a2a2a;
+    width: 360px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+
+      h3 { margin: 0; color: #fff; font-size: 1rem; }
+
+      .time-badge {
+        background: #D4AF37;
+        color: #000;
+        padding: 2px 12px;
+        border-radius: 20px;
+        font-weight: 800;
+        font-size: 0.78rem;
+      }
+    }
+
+    .form-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      input, select, textarea {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #eee;
+        padding: 10px 12px;
+        border-radius: 8px;
+        outline: none;
+        font-size: 0.82rem;
+        font-family: inherit;
+        transition: border-color 0.15s;
+
+        &:focus { border-color: #D4AF37; }
+        &::placeholder { color: #444; }
+
+        option { background: #1a1a1a; }
+      }
+    }
+
+    .modal-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+
+      button {
+        flex: 1;
+        padding: 11px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: opacity 0.15s;
+        &:hover { opacity: 0.85; }
+      }
+
+      .save-btn { background: #D4AF37; color: #000; }
+      .close-btn { background: #222; color: #888; border: 1px solid #2a2a2a; }
+    }
+  }
+
+  // ─── МОДАЛКА ПЕРЕГЛЯДУ ЗАПИСУ ─────────────────────────────
+  .view-modal {
+    background: #141414;
+    border: 1px solid #252525;
+    border-radius: 16px;
+    width: 360px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    overflow: hidden;
+    position: relative;
+
+    .view-close {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      background: #222;
+      border: 1px solid #333;
+      color: #777;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, border-color 0.15s;
+      &:hover { color: #fff; border-color: #555; }
+    }
+
+    .view-status-bar {
+      background: #0e0e0e;
+      padding: 10px 18px;
+      border-bottom: 1px solid #1e1e1e;
+
+      .status-chip {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 3px 10px;
+        border-radius: 20px;
+
+        &.status-pending    { background: #1e1a00; color: #D4AF37; }
+        &.status-confirmed  { background: #0d1f0d; color: #4caf50; }
+        &.status-cancelled  { background: #1f0d0d; color: #f44336; }
+        &.status-completed  { background: #0d1520; color: #4fc3f7; }
+      }
+    }
+
+    .view-hero {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 20px 18px;
+      border-bottom: 1px solid #1e1e1e;
+      background: #111;
+
+      .view-time-block {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        min-width: 80px;
+
+        .view-time {
+          font-size: 2rem;
+          font-weight: 800;
+          color: #D4AF37;
+          line-height: 1;
+        }
+
+        .view-date {
+          font-size: 0.7rem;
+          color: #555;
+          margin-top: 3px;
+        }
+      }
+
+      .view-divider {
+        width: 1px;
+        height: 44px;
+        background: #252525;
+        margin: 0 18px;
+        flex-shrink: 0;
+      }
+
+      .view-client-block {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        .view-label {
+          font-size: 0.6rem;
+          color: #444;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 3px;
+        }
+
+        .view-client-name {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #eee;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .view-phone {
+          font-size: 0.72rem;
+          color: #D4AF37;
+          text-decoration: none;
+          margin-top: 3px;
+          &:hover { text-decoration: underline; }
+        }
+      }
+    }
+
+    .view-details {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .view-detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      .vd-label {
+        font-size: 0.6rem;
+        color: #444;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .vd-value {
+        font-size: 0.85rem;
+        color: #ccc;
+        font-weight: 500;
+
+        em { color: #555; font-style: normal; }
+
+        &.comment {
+          color: #777;
+          font-style: italic;
+          font-size: 0.8rem;
+        }
+      }
+    }
+  }
+.category-filter {
+  background: #181818;
+  border: 1px solid #2a2a2a;
+  color: #D4AF37;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+
+  &:hover { border-color: #D4AF37; }
+  option { background: #111; color: #fff; }
+}

@@ -3,7 +3,7 @@ const Service = require("../models/Service");
 // Отримати всі послуги
 exports.getAllServices = async (req, res) => {
     try {
-        const services = await Service.find();
+        const services = await Service.find().populate('category', 'name color slug');
         res.status(200).json(services);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -21,14 +21,18 @@ exports.createService = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
+
+// Оновити послугу
 exports.updateService = async (req, res) => {
     try {
-        const updated = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updated = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true })
+            .populate('category', 'name color slug');
         res.json(updated);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
 // Видалення послуги
 exports.deleteService = async (req, res) => {
     try {

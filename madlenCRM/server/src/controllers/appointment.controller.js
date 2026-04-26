@@ -1,6 +1,8 @@
 const Appointment = require('../models/Appointment');
 const Staff = require('../models/Staff');
-
+const User = require('../models/User');
+const webpush = require('web-push'); // Переконайся, що бібліотека підключена
+const Service = require('../models/Service'); // ТУТ БУЛА ПОМИЛКА — ДОДАЙ ЦЕЙ РЯДОК
 // 1. Отримати зайняті слоти та робочий графік
 exports.getBookedSlots = async (req, res) => {
     try {
@@ -33,37 +35,44 @@ exports.getBookedSlots = async (req, res) => {
 };
 
 // 2. Створити новий запис
+// 2. Створити новий запис (підтримує і клієнтський запис, і ручний з календаря)
 exports.createAppointment = async (req, res) => {
     try {
-        const { serviceId, staffId, date, time, comment } = req.body;
-        const clientId = req.user.id;
+        const { staff, service, clientName, phone, date, time, comment, duration } = req.body;
 
-        const existing = await Appointment.findOne({
-            staff: staffId,
+        const selectedService = await Service.findById(service);
+        if (!selectedService) return res.status(404).json({ message: "Послугу не знайдено" });
+
+        const finalDuration = duration || selectedService.duration || 20;
+        const finalCategory = selectedService.category || 'other';
+
+        const newAppointment = new Appointment({
+            staff,
+            service,
+            clientName,
+            phone,
             date,
             time,
-            status: { $ne: 'cancelled' }
+            comment,
+            duration: finalDuration,
+            category: finalCategory, // Оце поле тепер збережеться правильно
+            status: 'pending'
         });
 
-        if (existing) {
-            return res.status(400).json({ message: "Цей час вже зайнятий" });
-        }
+        await newAppointment.save();
 
-        const appointment = new Appointment({
-            client: clientId,
-            staff: staffId,
-            service: serviceId,
-            date,
-            time,
-            comment
-        });
+        // Повертаємо дані, щоб фронт відразу бачив зміни
+        const populated = await Appointment.findById(newAppointment._id)
+            .populate('staff service');
 
-        await appointment.save();
-        res.status(201).json({ message: "Запис створено", appointment });
-    } catch (err) {
-        res.status(500).json({ message: "Помилка сервера при створенні запису" });
+        res.status(201).json(populated);
+    } catch (error) {
+        console.error("CREATE ERROR:", error);
+        res.status(500).json({ message: "Помилка сервера" });
     }
 };
+
+
 
 // 3. Отримати записи для майстра
 exports.getMasterAppointments = async (req, res) => {
@@ -166,3 +175,140 @@ exports.getFinanceStats = async (req, res) => {
         res.status(500).json({ message: "Помилка автоматичного розрахунку", error: err.message });
     }
 };
+// Оновлення запису (для Drag-and-Drop)
+webpush.setVapidDetails(
+    'mailto:your-email@example.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+);
+
+// В appointment.controller.js заміни функцію updateAppointment на цю:
+exports.updateAppointment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { staff, time, date } = req.body;
+
+        // 1. Знаходимо запис, який хочемо перемістити
+        const movingApp = await Appointment.findById(id).populate('service');
+        if (!movingApp) return res.status(404).json({ message: "Запис не знайдено" });
+
+        // 2. Шукаємо, чи є вже хтось на цьому місці
+        const existingApps = await Appointment.find({
+            _id: { $ne: id }, // не враховуємо самого себе
+            staff: staff,
+            date: date,
+            time: time,
+            status: { $ne: 'cancelled' }
+        }).populate('service');
+
+        // 3. ЛОГІЧНА ПЕРЕВІРКА НАКЛАДОК
+        // 3. ЛОГІЧНА ПЕРЕВІРКА НАКЛАДОК
+        if (existingApps.length > 0) {
+            const movingServiceName = movingApp.service?.name?.toLowerCase() || '';
+
+            // Перевіряємо, чи це послуги, де НАКЛАДКИ ЗАБОРОНЕНІ (манікюр, візаж, стрижка)
+            const isStrictService = /манікюр|manicure|візаж|makeup|стриж|cut/i.test(movingServiceName);
+
+            if (isStrictService) {
+                return res.status(400).json({ message: "Цей майстер не може прийняти двох клієнтів на цей час (манікюр/візаж)" });
+            }
+
+            // Якщо це фарбування — залишаємо твою логіку (можна паралельно)
+            const isMovingDyeing = /фарб|color|малюв|dye/i.test(movingServiceName);
+            const isExistingDyeing = existingApps.some(app =>
+                /фарб|color|малюв|dye/i.test(app.service?.name || '')
+            );
+
+            if (!isMovingDyeing && !isExistingDyeing) {
+                return res.status(400).json({ message: "Цей час вже зайнятий" });
+            }
+        }
+        // 4. Оновлюємо
+        const updatedApp = await Appointment.findByIdAndUpdate(
+            id,
+            { staff, time, date },
+            { new: true }
+        ).populate('staff service client');
+
+        res.status(200).json(updatedApp);
+    } catch (error) {
+        console.error("PATCH ERROR:", error);
+        res.status(500).json({ message: "Помилка сервера", error: error.message });
+    }
+};
+
+
+
+exports.getAllAppointments = async (req, res) => {
+    try {
+        const appointments = await Appointment.find()
+            .populate('staff') // Важливо: без фільтрації полів!
+            .populate({
+                path: 'service',
+                populate: {
+                    path: 'category',
+                    select: 'name color slug'
+                }
+            })
+            .populate('client', 'name phone');
+
+        const formatted = appointments.map(app => {
+            // 1. Отримуємо ID послуги
+            const sId = app.service?._id?.toString() || app.service?.toString();
+
+            // 2. ДІСТАЄМО ЧАС МАЙСТРА
+            // Важливо: перевіряємо чи існує об'єкт specializations
+            const specs = app.staff?.specializations || {};
+            const masterDuration = specs[sId];
+
+            // 3. ПРІОРИТЕТ: Час майстра -> Час запису -> Час послуги -> 20
+            const finalDuration = Number(masterDuration) || Number(app.duration) || Number(app.service?.duration) || 20;
+
+            // ЛОГ ДЛЯ ТЕБЕ (дивись в консоль бекенда!)
+            if (masterDuration) {
+                console.log(`[OK] Майстер ${app.staff?.name} має спец. час ${masterDuration} для ${sId}`);
+            }
+
+            return {
+                _id: app._id,
+                staffId: app.staff?._id || null,
+                staff: app.staff,
+                date: app.date,
+                time: app.time,
+                status: app.status,
+                duration: finalDuration,
+                clientName: app.clientName || app.client?.name || 'Клієнт',
+                phone: app.phone || app.client?.phone || '',
+                comment: app.comment || '',
+                serviceName: app.service?.name || '—',
+                categoryName: app.service?.category?.name || '—',
+                serviceId: app.service?._id || app.service,
+                categoryColor: app.service?.category?.color || '#D4AF37',
+                masterName: app.staff?.name || 'Майстер',
+                masterRole: app.staff?.role || '',
+            };
+        });
+
+        res.status(200).json(formatted);
+    } catch (err) {
+        console.error("ERROR IN getAllAppointments:", err);
+        res.status(500).json({ message: "Помилка сервера", error: err.message });
+    }
+};
+
+
+/* exports.getAllAppointments = async (req, res) => {
+    try {
+        const appointments = await Appointment.find()
+            .populate('staff')
+            .populate({
+                path: 'service',
+                populate: { path: 'category' } // Підтягуємо категорію всередині послуги
+            });
+        res.json(appointments);
+    } catch (err) {
+        res.status(500).json({ message: "Помилка" });
+    }
+};
+
+*/

@@ -383,3 +383,59 @@
 @media (max-width: 480px) {
   .services-page .services-hero h1 { font-size: 2rem; }
 }
+
+.specializations-container {
+  margin-top: 25px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 15px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+
+  h4 {
+    color: $color-gold;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .spec-hint {
+    font-size: 0.7rem;
+    color: #666;
+    margin-bottom: 15px;
+  }
+
+  .spec-list-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 5px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: rgba($color-gold, 0.3); border-radius: 10px; }
+  }
+
+  .spec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+
+    .spec-name { font-size: 0.85rem; color: #ccc; }
+
+    .spec-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      input {
+        width: 65px !important;
+        padding: 6px 10px !important;
+        background: #000 !important;
+        text-align: center;
+        margin: 0 !important;
+      }
+      .unit { font-size: 0.75rem; color: #555; }
+    }
+  }
+}

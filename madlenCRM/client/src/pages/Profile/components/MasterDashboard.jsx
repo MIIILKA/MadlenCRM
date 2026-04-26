@@ -142,17 +142,13 @@ function FinancePanel({ appointments, backendStats }) {
 
     const now = new Date();
 
-    // Логіка "автоматичного" завершення: статус completed АБО час минув (і не скасовано)
     const isActuallyCompleted = (a) => {
         const appDate = new Date(`${a.date}T${a.time}`);
         return a.status === 'completed' || (a.status !== 'cancelled' && appDate < now);
     };
 
     const completed = appointments.filter(isActuallyCompleted);
-
-    // Використовуємо суму з бекенда або рахуємо локально як запасний варіант
     const totalAll = backendStats?.totalEarnings !== undefined ? backendStats.totalEarnings : completed.reduce((s, a) => s + Number(a.service?.price || 0), 0);
-
     const sum = (apps) => apps.reduce((s, a) => s + Number(a.service?.price || 0), 0);
 
     const byMonth = completed.reduce((acc, a) => {
@@ -242,7 +238,7 @@ function FinancePanel({ appointments, backendStats }) {
 
 // ── Головний компонент ────────────────────────────────────────────────────────
 export const MasterDashboard = () => {
-    const { user } = useAuthStore();
+    const { user, logout } = useAuthStore();
     const [appointments, setAppointments] = useState([]);
     const [financeStats, setFinanceStats] = useState({ totalEarnings: 0 });
     const [loading, setLoading]           = useState(true);
@@ -253,28 +249,56 @@ export const MasterDashboard = () => {
     const [showFinance, setShowFinance]   = useState(false);
     const [calcApp, setCalcApp]           = useState(null);
 
+    const [services, setServices]               = useState([]);
+    const [specializations, setSpecializations] = useState({});
+    const [showSpecs, setShowSpecs]             = useState(false);
+    const [specsSaved, setSpecsSaved]           = useState(false);
+    const [masterData, setMasterData]           = useState(null);
+
     useEffect(() => {
-        // 1. Завантаження записів майстра
-        api.get('/appointments/master')
-            .then(res => { setAppointments(res.data); setLoading(false); })
-            .catch(() => setLoading(false));
+        const staffId = user?.id || user?.staffId || user?._id;
+        if (!staffId || staffId === "undefined") return;
 
-        // 2. Завантаження автоматичних фінансів
-        api.get('/appointments/finance/stats')
-            .then(res => { setFinanceStats(res.data); })
-            .catch(err => console.error("Фінанси недоступні:", err));
+        const loadDashboardData = async () => {
+            try {
+                // 1. Записи
+                const appsRes = await api.get('/appointments/master');
+                setAppointments(appsRes.data);
 
-        // 3. Завантаження робочих годин
-        api.get('/appointments/staff/work-hours')
-            .then(res => {
-                if (res.data && Object.keys(res.data).length) {
+                // 2. Фінанси
+                const finRes = await api.get('/appointments/finance/stats').catch(() => ({data: {totalEarnings: 0}}));
+                setFinanceStats(finRes.data);
+
+                // 3. Робочі години
+                const hoursRes = await api.get('/appointments/staff/work-hours').catch(() => ({data: {}}));
+                if (hoursRes.data && Object.keys(hoursRes.data).length) {
                     const normalized = {};
-                    Object.keys(res.data).forEach(k => normalized[String(k)] = res.data[k]);
+                    Object.keys(hoursRes.data).forEach(k => normalized[String(k)] = hoursRes.data[k]);
                     setWorkHours(normalized);
                 }
-            })
-            .catch(() => {});
-    }, []);
+
+                // 4. Послуги
+                const servRes = await api.get('/services').catch(() => ({data: []}));
+                setServices(servRes.data);
+
+                // 5. Профіль майстра для аватара та спеціалізацій
+                const stRes = await api.get(`/staff/${staffId}`).catch(() => null);
+                if (stRes?.data) {
+                    setMasterData(stRes.data);
+                    if (stRes.data.specializations) {
+                        setSpecializations(stRes.data.specializations);
+                    }
+                }
+
+                setLoading(false);
+            } catch (err) {
+                console.error("❌ Помилка:", err);
+                setLoading(false);
+            }
+        };
+
+        loadDashboardData();
+    }, [user]);
 
     const today      = toISO(new Date());
     const weekDays   = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -295,12 +319,25 @@ export const MasterDashboard = () => {
         setTimeout(() => setHoursSaved(false), 2500);
     };
 
+    const handleSaveSpecs = async () => {
+        try {
+            const staffId = user?.id || user?.staffId || user?._id;
+            if (!staffId) return;
+            await api.put(`/staff/${staffId}`, { specializations });
+            setSpecsSaved(true);
+            setTimeout(() => setSpecsSaved(false), 2500);
+        } catch (err) {
+            alert("Помилка збереження часу");
+        }
+    };
+
     if (loading) return <div className="dash-loader">Завантаження графіку...</div>;
 
     return (
         <div className="master-dash">
+            {/* Хедер видалили, бо він є в Profile.jsx */}
 
-            {/* Статистика */}
+            {/* Статистика - тепер це самий верх дашборду */}
             <div className="master-dash__stats">
                 <div className="stat-card">
                     <span className="stat-label">На сьогодні</span>
@@ -350,7 +387,7 @@ export const MasterDashboard = () => {
                             <div key={iso} className={`cal-day ${isToday ? 'cal-day--today' : ''} ${isPast ? 'cal-day--past' : ''} ${!hours?.active ? 'cal-day--off' : ''}`}>
                                 <div className="cal-day__head">
                                     <span className="cal-day__name">{JS_TO_UK[day.getDay()]}</span>
-                                    <span className="cal-day__date">{formatDay(day)}</span>
+                                    <span className="cal-day__date">{day.getDate()}</span>
                                     {hours?.active
                                         ? <span className="cal-day__hours">{formatTime(hours.start)}–{formatTime(hours.end)}</span>
                                         : <span className="cal-day__off-label">вихідний</span>
@@ -400,7 +437,7 @@ export const MasterDashboard = () => {
                             const label = JS_TO_UK[dayIndex];
                             const h = workHours[String(dayIndex)];
                             return (
-                                <div key={dayIndex} className={`wh-row ${!h.active ? 'wh-row--off' : ''}`}>
+                                <div key={dayIndex} className={`wh-row ${!h?.active ? 'wh-row--off' : ''}`}>
                                     <label className="wh-toggle">
                                         <input type="checkbox" checked={h?.active}
                                                onChange={e => handleHourChange(dayIndex, 'active', e.target.checked)} />
@@ -425,6 +462,46 @@ export const MasterDashboard = () => {
                             {hoursSaved
                                 ? <><span className="material-symbols-rounded">check</span>Збережено</>
                                 : <><span className="material-symbols-rounded">save</span>Зберегти</>
+                            }
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* НОВА СЕКЦІЯ: ІНДИВІДУАЛЬНА ТРИВАЛІСТЬ */}
+            <div className="master-dash__work-hours">
+                <button className="work-hours-toggle" onClick={() => setShowSpecs(s => !s)}>
+                    <span className="material-symbols-rounded">timer</span>
+                    Індивідуальна тривалість
+                    <span className="material-symbols-rounded toggle-arrow">
+                        {showSpecs ? 'expand_less' : 'expand_more'}
+                    </span>
+                </button>
+                {showSpecs && (
+                    <div className="work-hours-panel">
+                        <p style={{fontSize: '0.75rem', color: '#666', marginBottom: '15px', padding: '0 10px'}}>
+                            Вкажіть час (у хв) для кожної послуги. Порожньо = стандарт салону.
+                        </p>
+                        {services.map(s => (
+                            <div key={s._id} className="wh-row" style={{justifyContent: 'space-between'}}>
+                                <span className="wh-day" style={{flex: 1, textAlign: 'left', fontSize: '0.9rem'}}>{s.name}</span>
+                                <div className="wh-times">
+                                    <input
+                                        type="number"
+                                        placeholder={s.duration}
+                                        value={specializations[s._id] || ''}
+                                        onChange={e => setSpecializations({...specializations, [s._id]: e.target.value})}
+                                        className="wh-input"
+                                        style={{width: '70px', textAlign: 'center'}}
+                                    />
+                                    <span style={{color: '#555', fontSize: '0.8rem', marginLeft: '5px'}}>хв</span>
+                                </div>
+                            </div>
+                        ))}
+                        <button className="wh-save-btn" onClick={handleSaveSpecs}>
+                            {specsSaved
+                                ? <><span className="material-symbols-rounded">check</span>Збережено!</>
+                                : <><span className="material-symbols-rounded">save</span>Зберегти мій час</>
                             }
                         </button>
                     </div>

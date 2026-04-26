@@ -4,26 +4,28 @@
 .services-page {
   background: #0a0a0a;
   color: #fff;
-  padding-bottom: constant(safe-area-inset-bottom); // Для iPhone "без рамок"
+  padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
-  overflow-x: hidden; // Гарантуємо відсутність горизонтального скролу
+  overflow-x: hidden;
 
-  // --- АДАПТИВНІ ЗАГОЛОВКИ ---
+  // --- ВЕЛИКІ ЗАГОЛОВКИ (ДЛЯ ВСЬОГО ФАЙЛУ) ---
   .section-title {
-    font-size: clamp(1.8rem, 5vw, 2.8rem); // Динамічний розмір
-    font-weight: 800;
-    margin-bottom: 30px;
+    font-size: clamp(2.8rem, 10vw, 4.5rem) !important; // Гігантський заголовок
+    font-weight: 900;
+    margin-bottom: 50px;
     padding: 0 20px;
+    letter-spacing: -2px;
+    text-transform: none;
 
     &.center { text-align: center; }
 
     @media (max-width: 480px) {
-      margin-bottom: 20px;
-      line-height: 1.2;
+      margin-bottom: 30px;
+      line-height: 1.1;
     }
   }
 
-  // --- HERO СЕКЦІЯ (АДАПТИВНА) ---
+  // --- HERO СЕКЦІЯ ---
   .services-hero {
     min-height: 40vh;
     display: flex;
@@ -45,7 +47,7 @@
 
     .admin-actions-hero {
       display: flex;
-      flex-wrap: wrap; // Щоб кнопки не вилазили за екран на мобайлі
+      flex-wrap: wrap;
       gap: 12px;
       margin-top: 25px;
       justify-content: center;
@@ -65,51 +67,82 @@
           color: #000;
         }
       }
-
     }
   }
 
-  // --- СІТКА ПОСЛУГ (MOBILE-FIRST) ---
+  // --- СІТКА ПОСЛУГ ---
   .services-grid {
     display: grid;
-    // 1 колонка на мобайлі, 2 на планшеті, 3+ на десктопі
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 25px;
     padding: 20px;
     max-width: 1400px;
     margin: 0 auto;
 
-    @media (min-width: 650px) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    @media (min-width: 1100px) {
-      grid-template-columns: repeat(3, 1fr);
-    }
+    @media (min-width: 650px) { grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 1100px) { grid-template-columns: repeat(3, 1fr); }
   }
 
-  // --- КАРТКА ПОСЛУГИ (Touch-friendly) ---
+  // --- КАРТКА ПОСЛУГИ ТА КНОПКИ РЕДАГУВАННЯ ---
   .service-card {
     @include glass;
-    padding: 25px;
-    border-radius: 24px;
+    padding: 30px !important;
+    border-radius: 28px !important;
     display: flex;
     flex-direction: column;
     height: 100%;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
 
-    h3 {
-      font-size: clamp(1.2rem, 3vw, 1.5rem);
-      margin-bottom: 20px;
-      color: #fff;
-      font-weight: 700;
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+
+      .cat {
+        color: $color-gold;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 1px;
+      }
+
+      // СТИЛЬНІ КНОПКИ РЕДАГУВАННЯ (ЯК ТИ ПРОСИВ)
+      .admin-actions-inline {
+        display: flex;
+        gap: 8px;
+
+        button {
+          width: 38px;
+          height: 38px;
+          background: #111;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #fff;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+          span { font-size: 20px; }
+
+          &:hover {
+            border-color: $color-gold;
+            color: $color-gold;
+            background: rgba($color-gold, 0.05);
+            transform: translateY(-2px);
+          }
+        }
+      }
     }
 
-    p {
-      font-size: 0.95rem;
-      color: #aaa;
-      line-height: 1.5;
-      margin-bottom: 25px;
+    h3 {
+      font-size: clamp(1.3rem, 3vw, 1.7rem);
+      margin-bottom: 20px;
+      color: #fff;
+      font-weight: 800;
     }
 
     .card-foot {
@@ -118,183 +151,276 @@
       align-items: center;
       margin-top: auto;
       padding-top: 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
 
       .price {
-        font-size: 1.6rem;
-        font-weight: 800;
+        font-size: 1.8rem;
+        font-weight: 900;
         color: $color-gold;
       }
     }
 
     .book-btn {
       background: transparent;
-      border: 1.5px solid $color-gold;
+      border: 2px solid $color-gold;
       color: $color-gold;
-      padding: 12px 24px;
-      border-radius: 14px;
-      font-weight: 700;
+      padding: 14px 28px;
+      border-radius: 16px;
+      font-weight: 800;
       text-transform: uppercase;
       font-size: 0.85rem;
-      letter-spacing: 1px;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: 0.3s;
 
-      // Оптимізація під натискання пальцем
-      @media (max-width: 768px) {
-        padding: 14px 20px;
-        flex: 1;
-        margin-left: 15px;
-        text-align: center;
-      }
+      &:hover { background: $color-gold; color: #000; @include gold-glow; }
+    }
+  }
 
-      &:active {
-        transform: scale(0.96);
-        background: rgba($color-gold, 0.1);
-      }
+  // --- СЕКЦІЯ МАЙСТРІВ (РЕАЛЬНО ВЕЛИКІ БЛОКИ) ---
+  // --- СЕКЦІЯ МАЙСТРІВ (ЦЕНТРУВАННЯ ТА МАСИВНІСТЬ) ---
+  .staff-section {
+    padding: 100px 20px;
+    background: #000;
+
+    .staff-grid {
+      display: grid !important;
+      // justify-content: center центруює всі картки, якщо їх мало
+      justify-content: center !important;
+
+      // Використовуємо auto-fit замість auto-fill, щоб сітка не створювала порожні колонки справа
+      grid-template-columns: repeat(auto-fit, minmax(280px, 320px)) !important;
+
+      gap: 40px !important;
+      margin-top: 50px;
+      max-width: 1400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .staff-card {
+      background: #141414 !important;
+      border: 1px solid rgba($color-gold, 0.2) !important;
+      border-radius: 35px !important;
+      padding: 60px 40px !important; // Ще більше падінгів для солідності
+      text-align: center;
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
       &:hover {
-        background: $color-gold;
-        color: #000;
-        @include gold-glow;
+        transform: translateY(-15px);
+        border-color: $color-gold !important;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+      }
+
+      &__avatar {
+        width: 140px !important; // Максимальний розмір аватара
+        height: 140px !important;
+        background: #000;
+        border-radius: 50%;
+        margin: 0 auto 30px;
+        border: 3px solid $color-gold;
+        overflow: hidden;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+
+        img { width: 100%; height: 100%; object-fit: cover; }
+      }
+
+      h3 {
+        margin: 20px 0 10px;
+        color: #fff;
+        font-size: 1.8rem !important; // Дуже чітке ім'я
+        font-weight: 800;
+      }
+
+      .role {
+        color: #777;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      // Кнопки адміна (без змін, просто додав відступи)
+      .card-admin-overlay {
+        position: absolute;
+        top: 25px;
+        right: 25px;
+        display: flex;
+        gap: 12px;
+
+        button {
+          background: rgba(0,0,0,0.8);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: #fff;
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          cursor: pointer;
+          transition: 0.3s;
+
+          span { font-size: 22px; }
+          &.del-btn:hover { color: #ff4d4d; border-color: #ff4d4d; }
+          &.edit-btn:hover { color: $color-gold; border-color: $color-gold; }
+        }
       }
     }
   }
 
-  // --- ЛОКАЦІЯ (АДАПТАЦІЯ) ---
+  // --- ЛОКАЦІЯ ТА МОДАЛКИ (БЕЗ ЗМІН) ---
   .location-section {
-    padding: 60px 20px;
-
+    padding: 80px 20px;
     .location-container {
       max-width: 1200px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 1fr; // Стекуємо на мобайлі
+      grid-template-columns: 1fr;
       gap: 30px;
-
-      @media (min-width: 900px) {
-        grid-template-columns: 1fr 1.5fr;
-      }
+      @media (min-width: 900px) { grid-template-columns: 1fr 1.5fr; }
     }
-
-    .location-info {
-      @include glass;
-      padding: clamp(20px, 5vw, 40px);
-      border-radius: 28px;
-
-      .info-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 15px;
-        margin-bottom: 25px;
-
-        span {
-          color: $color-gold;
-          font-size: 28px;
-          flex-shrink: 0;
-        }
-
-        h3 {
-          font-size: 0.75rem;
-          color: #777;
-          margin: 0 0 5px 0;
-          text-transform: uppercase;
-        }
-
-        p {
-          font-size: 1.1rem;
-          font-weight: 600;
-          margin: 0;
-          line-height: 1.4;
-        }
-      }
-    }
-
-    .map-box {
-      border-radius: 28px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      height: 350px;
-      width: 100%;
-
-      @media (max-width: 480px) {
-        height: 280px;
-      }
-    }
+    .location-info { @include glass; padding: 40px; border-radius: 28px; }
+    .map-box { border-radius: 28px; overflow: hidden; height: 400px; }
   }
 
-  // --- МОДАЛЬНЕ ВІКНО (ПОВНА МОБІЛЬНА АДАПТАЦІЯ) ---
   .modal-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(12px);
-    display: flex;
-    justify-content: center;
-    align-items: flex-end; // Притискаємо до низу на мобайлі як у нативних апках
-    z-index: 10000;
-
-    @media (min-width: 768px) {
-      align-items: center;
-      padding: 20px;
-    }
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(12px);
+    display: flex; justify-content: center; align-items: center; z-index: 10000;
   }
 
   .modal-content {
-    background: #121212;
-    width: 100%;
-    max-width: 500px;
-    padding: 30px 24px;
-    border-radius: 30px 30px 0 0; // Закруглюємо тільки верх для mobile-sheet
-    border: 1px solid rgba($color-gold, 0.2);
-    border-bottom: none;
-    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #121212; width: 100%; max-width: 500px; padding: 40px;
+    border-radius: 35px; border: 1px solid rgba($color-gold, 0.2);
+    position: relative;
+    animation: modalAppear 0.3s ease-out;
+    .file-upload-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 25px;
+      position: relative;
 
-    @media (min-width: 768px) {
-      border-radius: 35px;
-      border-bottom: 1px solid rgba($color-gold, 0.2);
-      padding: 40px;
-      animation: modalAppear 0.3s ease-out;
+      .file-label.preview-box {
+        width: 140px; // Трохи більший розмір для зручності
+        height: 140px;
+        border-radius: 50%;
+        border: 2px dashed $color-gold;
+        cursor: pointer;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+        transition: 0.3s;
+        position: relative;
+
+        &:hover {
+          border-style: solid;
+          background: rgba($color-gold, 0.05);
+        }
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        // Іконка камери поверх фото при наведенні
+        .camera-icon-overlay {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: 0.3s;
+          color: #fff;
+          span { font-size: 32px; }
+        }
+
+        &:hover .camera-icon-overlay {
+          opacity: 1;
+        }
+      }
+    }
+    .absolute-close {
+      position: absolute; top: 20px; right: 20px; background: none; border: none;
+      color: #888; cursor: pointer; span { font-size: 28px; }
     }
 
     form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-
+      display: flex; flex-direction: column; gap: 15px;
       input, textarea {
-        background: #000;
-        border: 1px solid #222;
-        padding: 16px;
-        color: #fff;
-        border-radius: 16px;
-        font-size: 16px; // Важливо: 16px запобігає автозуму в Safari на iOS
-
+        background: #000; border: 1px solid #222; padding: 18px;
+        color: #fff; border-radius: 18px; font-size: 16px;
         &:focus { border-color: $color-gold; }
       }
-
       .submit-btn {
-        background: $color-gold;
-        color: #000;
-        padding: 18px;
-        border-radius: 16px;
-        font-weight: 800;
-        font-size: 1rem;
-        margin-top: 10px;
+        background: $color-gold; color: #000; padding: 20px;
+        border-radius: 18px; font-weight: 800; margin-top: 10px;
       }
     }
   }
 }
 
-// --- АНІМАЦІЇ ---
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+@keyframes modalAppear { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+input:-webkit-autofill {
+  -webkit-text-fill-color: #fff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #111 inset !important;
 }
 
-@keyframes modalAppear {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
+.specializations-container {
+  margin-top: 25px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 15px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 
+  h4 {
+    color: $color-gold;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .spec-hint {
+    font-size: 0.7rem;
+    color: #666;
+    margin-bottom: 15px;
+  }
+
+  .spec-list-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 5px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: rgba($color-gold, 0.3); border-radius: 10px; }
+  }
+
+  .spec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+
+    .spec-name { font-size: 0.85rem; color: #ccc; }
+
+    .spec-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      input {
+        width: 65px !important;
+        padding: 6px 10px !important;
+        background: #000 !important;
+        text-align: center;
+        margin: 0 !important;
+      }
+      .unit { font-size: 0.75rem; color: #555; }
+    }
+  }
+}

@@ -1,7 +1,17 @@
 const Staff = require("../models/Staff");
 const User = require("../models/User");
+const util = require('util'); // Додано для util.inspect
 
-// Отримати всіх майстрів
+// Нормалізація номера
+const normalizePhone = (phone) => {
+    if (!phone) return phone;
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10 && cleaned.startsWith('0')) return `+38${cleaned}`;
+    if (cleaned.length === 12 && cleaned.startsWith('380')) return `+${cleaned}`;
+    if (cleaned.length === 9) return `+380${cleaned}`;
+    return cleaned.length >= 12 ? `+${cleaned}` : phone;
+};
+
 exports.getAllStaff = async (req, res) => {
     try {
         const staff = await Staff.find();
@@ -11,76 +21,120 @@ exports.getAllStaff = async (req, res) => {
     }
 };
 
-// Створити майстра (+ автоматичний акаунт юзера)
-exports.createStaff = async (req, res) => {
+// НОВИЙ МЕТОД: Отримання одного майстра за ID (виправляє помилку 404 на фронтенді)
+exports.getStaffById = async (req, res) => {
     try {
-        const { name, email, role, phone } = req.body;
+        const staff = await Staff.findById(req.params.id);
+        if (!staff) {
+            return res.status(404).json({ message: "Майстра не знайдено" });
+        }
+        res.status(200).json(staff);
+    } catch (error) {
+        console.error("❌ ПОМИЛКА ОТРИМАННЯ МАЙСТРА:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
 
-        if (!phone) {
-            return res.status(400).json({ message: "Номер телефону обов'язковий" });
+exports.createStaff = async (req, res) => {
+    console.log("--- 🚀 createStaff почав роботу ---");
+    console.log("--- 🏁 Спроба створення ---");
+    console.log("Отримані дані:", req.body);
+    console.log("Файл:", req.file ? "✅ OK" : "❌ Порожньо");
+
+    try {
+        let {name, email, role, phone} = req.body;
+        const finalPhone = normalizePhone(phone);
+
+        if (req.file) {
+            console.log("✅ Фото успішно завантажено в хмару:", req.file.path);
+        } else {
+            console.log("ℹ️ Створення без фото");
         }
 
-        // 1. Шукаємо або створюємо User
-        // ПРИМІТКА: Ми не хешуємо пароль тут, бо в User.js тепер є pre('save')
-        let user = await User.findOne({ phone: phone }); // Перевір, чи в моделі поле phone чи loginValue
-
+        let user = await User.findOne({phone: finalPhone});
         if (!user) {
-            user = new User({
-                name,
-                phone: phone,      // використовуємо телефон як логін
-                password: '111111', // модель User сама захешує це при збереженні
-                role: 'master'
-            });
+            user = new User({name, phone: finalPhone, password: '111111', role: 'master'});
             await user.save();
-            console.log(`✅ Створено акаунт для майстра: ${name}`);
         }
 
-        // 2. Створюємо запис у колекції Staff з ТИМ САМИМ ID
         const staffData = {
             _id: user._id,
             name,
-            email,
+            email: email || "",
             role,
-            phone
+            phone: finalPhone,
+            avatar: req.file ? req.file.path : ""
         };
-
-        if (req.file) {
-            staffData.avatar = req.file.path;
-        }
 
         const newStaff = new Staff(staffData);
         await newStaff.save();
 
-        console.log(`✅ Майстра додано в список персоналу: ${name}`);
+        console.log("✅ Працівника додано!");
         res.status(201).json(newStaff);
+
     } catch (error) {
-        console.error("❌ Помилка при створенні майстра:", error.message);
-        res.status(400).json({ message: error.message });
+        console.log("--- ❌ ПОМИЛКА В КОНТРОЛЕРІ ---");
+        console.error(util.inspect(error, {depth: null, colors: true}));
+        res.status(500).json({message: error.message});
     }
 };
 
-// Оновити дані майстра
 exports.updateStaff = async (req, res) => {
     try {
-        const updated = await Staff.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        // Якщо прийшов новий файл через Multer (Cloudinary)
+        if (req.file) {
+            req.body.avatar = req.file.path;
+        }
+
+        if (req.body.phone) {
+            req.body.phone = normalizePhone(req.body.phone);
+        }
+
+        // Обробка спеціалізацій, якщо вони прийшли як рядок (через FormData)
+        if (req.body.specializations && typeof req.body.specializations === 'string') {
+            try {
+                req.body.specializations = JSON.parse(req.body.specializations);
+            } catch (e) {
+                console.error("Помилка парсингу спеціалізацій");
+            }
+        }
+
+        const updated = await Staff.findByIdAndUpdate(
+            req.params.id,
+            { $set: req.body },
+            { new: true }
+        );
+
+        if (!updated) return res.status(404).json({ message: "Майстра не знайдено" });
+
         res.status(200).json(updated);
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error("❌ ПОМИЛКА ОНОВЛЕННЯ:", error);
+        res.status(500).json({ message: error.message });
     }
 };
 
-// Видалити майстра (і його акаунт юзера)
 exports.deleteStaff = async (req, res) => {
     try {
         const staff = await Staff.findById(req.params.id);
         if (staff) {
-            // Видаляємо зв'язаного юзера, щоб не лишати "хвостів"
             await User.findByIdAndDelete(staff._id);
             await Staff.findByIdAndDelete(req.params.id);
-            console.log(`🗑️ Майстра та його акаунт видалено`);
         }
         res.status(200).json({ message: "Успішно видалено" });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+exports.getStaffById = async (req, res) => {
+    try {
+        const member = await Staff.findById(req.params.id);
+        if (!member) {
+            // Якщо не знайшли в Staff, не кидаємо помилку 500, а даємо 404
+            return res.status(404).json({ message: "Співробітника з таким ID не знайдено в базі" });
+        }
+        res.json(member);
+    } catch (err) {
+        res.status(500).json({ message: "Помилка сервера", error: err.message });
     }
 };

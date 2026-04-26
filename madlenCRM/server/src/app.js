@@ -1,10 +1,10 @@
+require('dotenv').config(); // МАЄ БУТИ ПЕРШИМ РЯДКОМ
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const sendReminders = require('./utils/pushReminders');
-
-require('dotenv').config();
+const categoryRoutes = require('./routes/category.routes');
 
 const app = express();
 
@@ -17,9 +17,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-// 2. Статичні файли
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 3. Підключення до бази даних
 const dbURI = process.env.MONGODB_URI || process.env.MONGO_URI;
@@ -43,6 +40,9 @@ app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/services', require('./routes/services.routes'));
 app.use('/api/staff', require('./routes/staff.routes'));
 app.use('/api/appointments', require('./routes/appointments.routes'));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/categories', categoryRoutes);
+
 
 // 5. 404
 app.use((req, res) => {

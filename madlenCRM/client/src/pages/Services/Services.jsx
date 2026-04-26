@@ -1,134 +1,78 @@
 import React, { useState, useEffect } from 'react';
-
 import { useNavigate } from 'react-router-dom';
-
 import api from '../../api/';
-
 import { useAuthStore } from '../../store/authStore';
-
 import './Services.scss';
 
-
-
 export default function Services() {
-
     const [services, setServices] = useState([]);
-
     const [staff, setStaff] = useState([]);
-
+    // Додаємо стейт для категорій
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
-
     const [visibleCount, setVisibleCount] = useState(6);
-
     const [showModal, setShowModal] = useState(false);
-
     const [modalMode, setModalMode] = useState('service');
-
     const [editId, setEditId] = useState(null);
-
     const [filePreview, setFilePreview] = useState(null);
 
-
-
     const navigate = useNavigate();
-
     const { user, isAuthenticated } = useAuthStore();
-
     const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'owner');
 
-
-
     const [formData, setFormData] = useState({
-
         name: '', price: '', duration: '', category: '', description: '',
-
-        role: '', email: '', avatar: null
-
+        role: '', email: '', avatar: null, phone: ''
     });
 
-
-
     const fetchData = async () => {
-
         try {
-
-            const [sRes, stRes] = await Promise.all([
-
+            // Тепер завантажуємо і категорії теж
+            const [sRes, stRes, catRes] = await Promise.all([
                 api.get('/services'),
-
-                api.get('/staff')
-
+                api.get('/staff'),
+                api.get('/categories').catch(() => ({ data: [] })) // Заглушка, якщо роута ще немає
             ]);
-
             setServices(sRes.data);
-
             setStaff(stRes.data);
-
+            setCategories(catRes.data);
             setLoading(false);
-
         } catch (err) {
-
             console.error("Fetch error:", err);
-
             setLoading(false);
-
         }
-
     };
-
-
 
     useEffect(() => { fetchData(); }, []);
 
-
-
     const openModal = (mode, item = null) => {
-
         setModalMode(mode);
-
         setEditId(item?._id || null);
+        setFilePreview(item?.avatar ? `https://madlencrm-backend.onrender.com/${item.avatar}` : null);
 
-        setFilePreview(item?.avatar ? `http://localhost:5000/${item.avatar}` : null);
-
-        setFormData(item || { name: '', price: '', duration: '', category: '', description: '', role: '', email: '', avatar: null });
-
+        // Виправляємо formData: ініціалізуємо всі поля, щоб не було undefined
+        setFormData(item || {
+            name: '', price: '', duration: '', category: '',
+            description: '', role: '', email: '', avatar: null, phone: ''
+        });
         setShowModal(true);
-
     };
-
-
 
     const handleFileChange = (e) => {
-
         const file = e.target.files[0];
-
         if (file) {
-
             setFormData({ ...formData, avatar: file });
-
             setFilePreview(URL.createObjectURL(file));
-
         }
-
     };
-
-
 
     const handleDelete = async (mode, id) => {
-
         if (!window.confirm('Видалити цей елемент?')) return;
-
         try {
-
             await api.delete(`/${mode === 'service' ? 'services' : 'staff'}/${id}`);
-
             fetchData();
-
         } catch (err) { alert("Помилка видалення"); }
-
     };
-
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -136,276 +80,232 @@ export default function Services() {
 
         try {
             let payload;
+
             if (modalMode === 'staff') {
+                if (!formData.phone || formData.phone.length !== 13) {
+                    alert("Помилка: Номер має бути у форматі +380XXXXXXXXX");
+                    return;
+                }
                 payload = new FormData();
-                // Цей цикл автоматично додасть name, email, role та твій новий phone
-                Object.keys(formData).forEach(key => {
-                    if (formData[key] !== null) {
-                        payload.append(key, formData[key]);
-                    }
-                });
+                payload.append('name', formData.name);
+                payload.append('phone', formData.phone);
+                payload.append('role', formData.role);
+                if (formData.email) payload.append('email', formData.email);
+                if (formData.avatar instanceof File) payload.append('avatar', formData.avatar);
             } else {
-                payload = formData;
+                // ФІКС: Отримуємо ID обраної категорії з масиву categories
+                const selectedCat = categories.find(c => c.slug === formData.category || c._id === formData.category);
+
+                payload = {
+                    name: formData.name,
+                    price: Number(formData.price),
+                    duration: Number(formData.duration),
+                    // Шлемо саме ID об'єкта, щоб бекенд прийняв його як посилання
+                    category: selectedCat ? selectedCat._id : formData.category,
+                    description: formData.description
+                };
             }
 
-            if (editId) await api.put(`${endpoint}/${editId}`, payload);
-            else await api.post(endpoint, payload);
+            if (editId) {
+                await api.put(`${endpoint}/${editId}`, payload);
+            } else {
+                await api.post(endpoint, payload);
+            }
 
             setShowModal(false);
             fetchData();
         } catch (err) {
-            alert("Помилка збереження!");
+            console.error("❌ Помилка збереження:", err.response?.data || err.message);
+            // Виводимо детальну помилку з сервера, щоб знати, що не так у моделі
+            const serverMsg = err.response?.data?.message || "Не вдалося зберегти дані";
+            alert(`Помилка збереження: ${serverMsg}`);
         }
     };
 
 
+
     const handleBooking = (s) => {
-        // 1. Перевірка в консолі (ти маєш побачити це в F12)
-        console.log("--- DEBUG BOOKING ---");
-        console.log("Послуга:", s);
-        console.log("Авторизація:", isAuthenticated);
-
-        if (!s || !s._id) {
-            alert("Помилка: Послуга не знайдена");
-            return;
-        }
-
+        if (!s || !s._id) return;
         if (!isAuthenticated) {
-            console.log("Редирект на логін...");
             navigate('/login');
-            // Якщо navigate не спрацював, штовхаємо силою:
-            // window.location.href = '/login';
         } else {
-            console.log("Перехід на букінг...");
             navigate('/booking', { state: { service: s } });
         }
     };
 
-// ТОЧНІ КООРДИНАТИ ТЕРНОПІЛЬСЬКОЇ 21Є
-
-    const mapSrc = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2573.308708170889!2d24.012543315707!3d49.83592187939494!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473add70f5e38167%3A0x66c5d6c8b9195b0c!2z0LLRg9C70LjRhtGPINCh0YLQtdC_0LDQvdCwINCR0LDQvdC00LXRgNC4LCAxMiwg0JvRjNCy0ZbQsiwg0JvRjNCy0ZbQstGB0YzQutCwINC-0LHQuy4sIDc5MDAw!5e0!3m2!1suk!2sua!4v1700000000000!5m2!1suk!2sua4";
-
-
-
     if (loading) return <div className="services-loading">MADLEN...</div>;
 
-
-
     return (
-
         <div className="services-page">
-
             <section className="services-hero">
-
                 <div className="hero-content">
-
                     <h1>Madlen Studio</h1>
-
                     <div className="hero-actions">
-
-
-
-                            <div className="admin-actions-hero">
-                                <button className="btn-primary" onClick={() => document.getElementById('price-list').scrollIntoView({behavior: 'smooth'})}>Прайс-лист</button>
-                                {isAdmin && (
-                                    <div>
-                                        <button onClick={() => openModal('service')}>+ Послуга</button>
-
-                                        <button onClick={() => openModal('staff')}>+ Майстер</button>
-                                    </div>
-
-                                )}
-
-                            </div>
-
-
+                        <div className="admin-actions-hero">
+                            <button className="btn-primary" onClick={() => document.getElementById('price-list').scrollIntoView({behavior: 'smooth'})}>Прайс-лист</button>
+                            {isAdmin && (
+                                <div>
+                                    <button onClick={() => openModal('service')}>+ Послуга</button>
+                                    <button onClick={() => openModal('staff')}>+ Майстер</button>
+                                </div>
+                            )}
+                        </div>
                     </div>
-
                 </div>
-
             </section>
-
-
 
             <section className="location-section">
-
                 <div className="location-container">
-
                     <div className="location-info">
-
                         <h2 className="section-title">Контакти</h2>
-
                         <div className="info-item">
-
                             <span className="material-symbols-rounded">location_on</span>
-
                             <div><h3>Адреса</h3><p>Львів, вул. Тернопільська, 21є</p></div>
-
                         </div>
-
                         <div className="info-item">
-
                             <span className="material-symbols-rounded">schedule</span>
-
                             <div><h3>Графік</h3><p>Пн-Сб: 10:00 - 19:00</p></div>
-
                         </div>
-
                         <div className="info-item">
-
                             <span className="material-symbols-rounded">call</span>
-
                             <div><h3>Телефон</h3><p>+380 (96) 402 15 30</p></div>
-
                         </div>
-
                     </div>
-
                     <div className="map-box">
-
                         <iframe
-
-                            src="https://maps.google.com/maps?q=Студія%20краси%20Madlen%20Львів%20Тернопільська%2021є&t=&z=17&ie=UTF8&iwloc=&output=embed" width="100%"
-
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2574.686561011833!2d24.0322!3d49.8145!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473ae7f6f5b9d5b9%3A0x7d6f5b9d5b9d5b9!2z0KLQtdGA0L3QvtC_0ZbQu9GM0YHRjNC60LAsIDIx0LUsINCb0YzQstGW0LIsINCb0YzQstGW0LLRgdGM0LrQsCDQvtCx0LvQsNGB0YLRjCwgNzkwMDA!5e0!3m2!1suk!2sua!4v1713821000000!5m2!1suk!2sua"
+                            width="100%"
                             height="100%"
-
                             style={{ border: 0 }}
-
                             allowFullScreen=""
-
                             loading="lazy">
-
                         </iframe>
-
                     </div>
-
                 </div>
-
             </section>
-
-
 
             <section className="staff-section">
-
                 <h2 className="section-title center">Наші майстри</h2>
-
                 <div className="staff-grid">
-
                     {staff.map((m, index) => (
-
                         <div key={m._id} className="staff-card" style={{animationDelay: `${index * 0.1}s`}}>
-
                             {isAdmin && (
-
                                 <div className="card-admin-overlay">
-
                                     <button onClick={() => openModal('staff', m)} className="edit-btn"><span className="material-symbols-rounded">edit</span></button>
-
                                     <button onClick={() => handleDelete('staff', m._id)} className="del-btn"><span className="material-symbols-rounded">delete</span></button>
-
                                 </div>
-
                             )}
-
                             <div className="staff-card__avatar">
-
-                                {m.avatar ? <img src={`http://localhost:5000/${m.avatar}`} alt={m.name} /> : m.name.charAt(0)}
-
+                                {m.avatar ? (
+                                    <img src={m.avatar.startsWith('http') ? m.avatar : `https://madlencrm-backend.onrender.com/${m.avatar}`} alt={m.name} />
+                                ) : (
+                                    <span className="avatar-letter">{m.name.charAt(0)}</span>
+                                )}
                             </div>
-
                             <h3>{m.name}</h3>
-
                             <span className="role">{m.role}</span>
-
                         </div>
-
                     ))}
-
                 </div>
-
             </section>
-
-
-
 
             <section id="price-list" className="services-container">
                 <h2 className="section-title center">Послуги</h2>
                 <div className="services-grid">
-                    {/* ПЕРЕВІРКА: чи є дані та чи це масив */}
                     {services && Array.isArray(services) && services.length > 0 ? (
-                        services.slice(0, visibleCount).map(s => {
-                            // ПЕРЕВІРКА: чи існує об'єкт послуги
-                            if (!s) return null; // Якщо 's' undefined, просто пропускаємо
+                        services.slice(0, visibleCount).map(s => (
+                            <div key={s._id} className="service-card">
+                                <div className="card-head">
+                                    {/* Відображення категорії з динамічним кольором та захистом від [object Object] */}
+                                    <span
+                                        className="cat"
+                                        style={{
+                                            color: s.category?.color || '#D4AF37',
+                                            borderLeft: `3px solid ${s.category?.color || '#D4AF37'}`,
+                                            paddingLeft: '8px'
+                                        }}
+                                    >
+                            {s.category?.name
+                                ? s.category.name
+                                : (typeof s.category === 'string' ? s.category : 'Без категорії')
+                            }
+                        </span>
 
-                            return (
-                                <div key={s._id} className="service-card">
-                                    <div className="card-head">
-                                        <span className="cat">{s.category}</span>
-                                        {isAdmin && (
-                                            <div className="admin-actions-inline">
-                                                <button onClick={() => openModal('service', s)}><span className="material-symbols-rounded">edit</span></button>
-                                                <button onClick={() => handleDelete('service', s._id)}><span className="material-symbols-rounded">delete</span></button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <h3>{s.name}</h3>
-                                    <div className="card-foot">
-                                        <span className="price">{s.price} ₴</span>
-                                        <button
-                                            type="button"
-                                            className="book-btn"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleBooking(s);
-                                            }}
-                                        >
-                                            Записатись
-                                        </button>
-                                    </div>
+                                    {isAdmin && (
+                                        <div className="admin-actions-inline">
+                                            <button onClick={() => openModal('service', s)}>
+                                                <span className="material-symbols-rounded">edit</span>
+                                            </button>
+                                            <button onClick={() => handleDelete('service', s._id)}>
+                                                <span className="material-symbols-rounded">delete</span>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                            );
-                        })
+
+                                <h3>{s.name}</h3>
+
+                                <div className="card-foot">
+                                    <span className="price">{s.price} ₴</span>
+                                    <button
+                                        type="button"
+                                        className="book-btn"
+                                        onClick={() => handleBooking(s)}
+                                    >
+                                        Записатись
+                                    </button>
+                                </div>
+                            </div>
+                        ))
                     ) : (
-                        // Якщо послуг немає, показуємо заглушку
                         <div className="no-services">Наразі немає доступних послуг</div>
                     )}
                 </div>
 
-                {visibleCount < services.length && (
-                    <button className="load-more btn-primary" onClick={() => setVisibleCount(v => v + 6)}>Показати ще</button>
+                {services && visibleCount < services.length && (
+                    <button
+                        className="load-more btn-primary"
+                        onClick={() => setVisibleCount(v => v + 6)}
+                    >
+                        Показати ще
+                    </button>
                 )}
             </section>
 
-
             {showModal && (
-
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-
+                    <div className="modal-content admin-modal" onClick={e => e.stopPropagation()}>
+                        <button className="absolute-close" onClick={() => setShowModal(false)}>
+                            <span className="material-symbols-rounded">close</span>
+                        </button>
                         <div className="modal-header">
-
                             <h2>{editId ? 'Редагувати' : 'Додати нове'}</h2>
-
-                            <button className="close-btn" onClick={() => setShowModal(false)}><span className="material-symbols-rounded">close</span></button>
-
                         </div>
-
-                        <form onSubmit={handleSubmit} className="modern-form">
+                        <form onSubmit={handleSubmit} className="modern-form" noValidate>
                             {modalMode === 'staff' ? (
                                 <>
                                     <div className="file-upload-container">
-                                        <label htmlFor="avatar-upload" className="file-label">
-                                            {filePreview ? <img src={filePreview} alt="Preview" /> : <span className="material-symbols-rounded">add_a_photo</span>}
-                                            <p>Фото майстра</p>
+                                        <label htmlFor="avatar-upload" className="file-label preview-box">
+                                            {filePreview ? <img src={filePreview} alt="Preview" className="staff-preview-img" /> : <span className="material-symbols-rounded">add_a_photo</span>}
                                         </label>
                                         <input id="avatar-upload" type="file" accept="image/*" onChange={handleFileChange} hidden />
                                     </div>
-                                    <input type="text" placeholder="Ім'я" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                                    <input type="email" placeholder="Email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-                                    <input type="tel" placeholder="Номер телефону (напр. +380...)" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-                                    <input type="text" placeholder="Роль" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} />
+                                    <input type="text" placeholder="Ім'я майстра" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                                    <input type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                                    <input
+                                        type="tel"
+                                        placeholder="Номер телефону"
+                                        required
+                                        value={formData.phone}
+                                        onFocus={() => { if (!formData.phone) setFormData({...formData, phone: '+380'}); }}
+                                        onChange={e => {
+                                            let val = e.target.value;
+                                            if (!val.startsWith('+')) val = '+' + val.replace(/\D/g, '');
+                                            const digitsOnly = val.slice(1).replace(/\D/g, '');
+                                            if (digitsOnly.length <= 12) setFormData({...formData, phone: '+' + digitsOnly});
+                                        }}
+                                    />
+                                    <input type="text" placeholder="Посада" required value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} />
                                 </>
                             ) : (
                                 <>
@@ -414,21 +314,25 @@ export default function Services() {
                                         <input type="number" placeholder="Ціна" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
                                         <input type="number" placeholder="Хв" value={formData.duration} onChange={e => setFormData({...formData, duration: e.target.value})} />
                                     </div>
-                                    <input type="text" placeholder="Категорія" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} />
+                                    <select
+                                        value={typeof formData.category === 'object' ? formData.category._id : formData.category}
+                                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                    >
+                                        <option value="">Оберіть категорію</option>
+                                        {categories.map(cat => (
+                                            <option key={cat._id} value={cat._id}>
+                                                {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                     <textarea placeholder="Опис" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
                                 </>
                             )}
-                            <button type="submit" className="submit-btn">Зберегти</button>
+                            <button type="submit" className="submit-btn">Зберегти дані</button>
                         </form>
-
                     </div>
-
                 </div>
-
             )}
-
         </div>
-
     );
-
 }

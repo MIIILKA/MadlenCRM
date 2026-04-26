@@ -7,20 +7,13 @@ import './Booking.scss';
 // Точна генерація слотів з урахуванням тривалості послуги
 function generateSlots(start, end, durationMinutes = 60) {
     if (!start || !end) return [];
-
     const slots = [];
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
-
     let cur = sh * 60 + sm;
     let endMin = eh * 60 + em;
-
-    // Якщо робочий день закінчується після опівночі (напр. до 02:00)
     if (endMin <= cur) endMin += 1440;
-
     const step = Number(durationMinutes) > 0 ? Number(durationMinutes) : 60;
-
-    // Важливо: слот додається тільки якщо послуга ВСТИГАЄ завершитися до кінця робочого дня
     while (cur + step <= endMin) {
         const h = String(Math.floor(cur / 60) % 24).padStart(2, '0');
         const m = String(cur % 60).padStart(2, '0');
@@ -73,27 +66,18 @@ export default function Booking() {
         }
     }, [state]);
 
-    // Отримання слотів при зміні майстра або дати
     useEffect(() => {
         if (selectedStaff && selectedDate) {
             const dateStr = formatDate(selectedDate);
-            console.log(`📡 Запит слотів на ${dateStr} для майстра ${selectedStaff.name}`);
-
             api.get(`/appointments/slots?staffId=${selectedStaff._id}&date=${dateStr}`)
                 .then(r => {
-                    console.log("📥 Отримано дані графіку:", r.data);
                     setBookedSlots(r.data.bookedSlots || []);
-                    // Примусово оновлюємо workHours новими даними з бекенду
                     setWorkHours(r.data.workHours);
                 })
-                .catch(err => {
-                    console.error("Помилка завантаження слотів", err);
-                    setBookedSlots([]);
-                });
+                .catch(() => setBookedSlots([]));
         }
     }, [selectedStaff, selectedDate]);
 
-    // Скидання при зміні майстра
     useEffect(() => {
         setSelectedDate(null);
         setSelectedTime(null);
@@ -118,17 +102,22 @@ export default function Booking() {
         return hours[dayKey]?.active === true;
     };
 
-    // Генерація слотів на основі отриманих workHours
-    const availableSlots = (() => {
-        if (!selectedDate || !workHours || !selectedService) return [];
+    const getServiceTimeRange = (service) => {
+        if (!service || !staff.length) return service?.duration ? `${service.duration} хв` : '';
+        const times = staff.map(m => m.specializations?.[service._id] || service.duration).filter(Boolean);
+        if (!times.length) return `${service.duration} хв`;
+        const min = Math.min(...times);
+        const max = Math.max(...times);
+        return min === max ? `${min} хв` : `${min}-${max} хв`;
+    };
 
+    const availableSlots = (() => {
+        if (!selectedDate || !workHours || !selectedService || !selectedStaff) return [];
         const dayKey = String(selectedDate.getDay());
         const h = workHours[dayKey];
-
         if (!h || h.active === false) return [];
-
-        console.log(`⚙️ Генеруємо слоти для дня ${dayKey} (${h.start} - ${h.end})`);
-        return generateSlots(h.start, h.end, selectedService.duration);
+        const actualDuration = selectedStaff.specializations?.[selectedService._id] || selectedService.duration;
+        return generateSlots(h.start, h.end, actualDuration);
     })();
 
     const daysInMonth = getDaysInMonth(calYear, calMonth);
@@ -142,8 +131,7 @@ export default function Booking() {
         const t = new Date(); t.setHours(0,0,0,0);
         return d < t;
     };
-    const isSameDay = (a, b) => a && b &&
-        a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+    const isSameDay = (a, b) => a && b && a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
 
     const prevMonth = () => {
         if (calMonth === 0) { setCalMonth(11); setCalYear(y => y-1); }
@@ -203,20 +191,18 @@ export default function Booking() {
                         <h2>Оберіть послугу</h2>
                         <div className="pick-grid">
                             {services.map(s => (
-                                <div key={s._id}
-                                     className={`pick-card ${selectedService?._id === s._id ? 'selected' : ''}`}
-                                     onClick={() => setSelectedService(s)}
-                                >
+                                <div key={s._id} className={`pick-card ${selectedService?._id === s._id ? 'selected' : ''}`} onClick={() => setSelectedService(s)}>
                                     <span className="pick-cat">{s.category}</span>
                                     <h3>{s.name}</h3>
                                     <div className="pick-foot">
                                         <span>{s.price} ₴</span>
-                                        {s.duration && <span>{s.duration} хв</span>}
+                                        <span>⏳ {getServiceTimeRange(s)}</span>
                                     </div>
                                 </div>
                             ))}
                         </div>
                         <div className="step-actions">
+                            <button className="btn-outline" onClick={() => navigate('/services')}>Скасувати</button>
                             <button className="btn-gold" disabled={!selectedService} onClick={() => setStep(2)}>Далі →</button>
                         </div>
                     </div>
@@ -227,13 +213,10 @@ export default function Booking() {
                         <h2>Оберіть майстра</h2>
                         <div className="staff-pick-grid">
                             {staff.map(m => (
-                                <div key={m._id}
-                                     className={`staff-pick-card ${selectedStaff?._id === m._id ? 'selected' : ''}`}
-                                     onClick={() => setSelectedStaff(m)}
-                                >
+                                <div key={m._id} className={`staff-pick-card ${selectedStaff?._id === m._id ? 'selected' : ''}`} onClick={() => setSelectedStaff(m)}>
                                     <div className="staff-avatar">
                                         {m.avatar
-                                            ? <img src={`http://localhost:5000/${m.avatar}`} alt={m.name} />
+                                            ? <img src={m.avatar.startsWith('http') ? m.avatar : `https://madlencrm-backend.onrender.com/${m.avatar}`} alt={m.name} />
                                             : m.name.charAt(0)
                                         }
                                     </div>
@@ -264,20 +247,8 @@ export default function Booking() {
                                     {calCells.map((d, i) => {
                                         const isOff = d && workHours && !isWorkDay(d, workHours);
                                         return (
-                                            <div key={i}
-                                                 className={`cal-cell
-                                                    ${!d ? 'empty' : ''}
-                                                    ${d && isPast(d) ? 'past' : ''}
-                                                    ${d && isSameDay(d, selectedDate) ? 'selected' : ''}
-                                                    ${isOff ? 'day-off' : ''}
-                                                `}
-                                                 onClick={() => {
-                                                     if (d && !isPast(d) && !isOff) {
-                                                         setSelectedDate(d);
-                                                         setSelectedTime(null);
-                                                     }
-                                                 }}
-                                            >
+                                            <div key={i} className={`cal-cell ${!d ? 'empty' : ''} ${d && isPast(d) ? 'past' : ''} ${d && isSameDay(d, selectedDate) ? 'selected' : ''} ${isOff ? 'day-off' : ''}`}
+                                                 onClick={() => { if (d && !isPast(d) && !isOff) { setSelectedDate(d); setSelectedTime(null); } }}>
                                                 {d ? d.getDate() : ''}
                                                 {isOff && <span className="day-off-dot" title="вихідний" />}
                                             </div>
@@ -286,32 +257,20 @@ export default function Booking() {
                                 </div>
                             </div>
                         </div>
-
                         <div className="time-wrap">
                             <h2>Оберіть час</h2>
-                            <p className="duration-hint">Тривалість послуги: <strong>{selectedService?.duration} хв</strong></p>
-                            {!selectedDate ? (
-                                <p className="hint">Спочатку оберіть дату</p>
-                            ) : (availableSlots && availableSlots.length === 0) ? (
-                                <p className="hint">На жаль, вільних вікон немає</p>
-                            ) : (
+                            <p className="duration-hint">Тривалість: <strong>{selectedStaff.specializations?.[selectedService._id] || selectedService.duration} хв</strong></p>
+                            {!selectedDate ? <p className="hint">Спочатку оберіть дату</p> : (availableSlots.length === 0) ? <p className="hint">Вільних вікон немає</p> : (
                                 <div className="time-grid">
                                     {availableSlots.map(t => {
                                         const booked = bookedSlots.includes(t);
                                         return (
-                                            <button key={t}
-                                                    className={`time-slot ${booked ? 'booked' : ''} ${selectedTime === t ? 'selected' : ''}`}
-                                                    disabled={booked}
-                                                    onClick={() => setSelectedTime(t)}
-                                            >
-                                                {t}
-                                            </button>
+                                            <button key={t} className={`time-slot ${booked ? 'booked' : ''} ${selectedTime === t ? 'selected' : ''}`} disabled={booked} onClick={() => setSelectedTime(t)}>{t}</button>
                                         );
                                     })}
                                 </div>
                             )}
                         </div>
-
                         <div className="step-actions full">
                             <button className="btn-outline" onClick={() => setStep(2)}>← Назад</button>
                             <button className="btn-gold" disabled={!selectedDate || !selectedTime} onClick={() => setStep(4)}>Далі →</button>
@@ -323,34 +282,16 @@ export default function Booking() {
                     <div className="booking-step">
                         <h2>Підтвердження запису</h2>
                         <div className="confirm-card">
-                            <div className="confirm-row">
-                                <span>Послуга</span>
-                                <strong>{selectedService?.name}</strong>
-                            </div>
-                            <div className="confirm-row">
-                                <span>Майстер</span>
-                                <strong>{selectedStaff?.name}</strong>
-                            </div>
-                            <div className="confirm-row">
-                                <span>Дата та час</span>
-                                <strong>{formatDateUA(selectedDate)} о {selectedTime}</strong>
-                            </div>
-                            <div className="confirm-row">
-                                <span>Вартість</span>
-                                <strong style={{color: '#D4AF37', fontSize: '1.2rem'}}>{selectedService?.price} ₴</strong>
-                            </div>
+                            <div className="confirm-row"><span>Послуга</span><strong>{selectedService?.name}</strong></div>
+                            <div className="confirm-row"><span>Майстер</span><strong>{selectedStaff?.name}</strong></div>
+                            <div className="confirm-row"><span>Дата та час</span><strong>{formatDateUA(selectedDate)} о {selectedTime}</strong></div>
+                            <div className="confirm-row"><span>Вартість</span><strong style={{color: '#D4AF37', fontSize: '1.2rem'}}>{selectedService?.price} ₴</strong></div>
                         </div>
-                        <textarea className="comment-input"
-                                  placeholder="Коментар (необов'язково)..."
-                                  value={comment}
-                                  onChange={e => setComment(e.target.value)}
-                        />
+                        <textarea className="comment-input" placeholder="Коментар (необов'язково)..." value={comment} onChange={e => setComment(e.target.value)} />
                         {error && <div className="booking-error">{error}</div>}
                         <div className="step-actions">
                             <button className="btn-outline" onClick={() => setStep(3)}>← Назад</button>
-                            <button className="btn-gold" disabled={submitting} onClick={handleSubmit}>
-                                {submitting ? '...' : 'Підтвердити запис'}
-                            </button>
+                            <button className="btn-gold" disabled={submitting} onClick={handleSubmit}>{submitting ? '...' : 'Підтвердити запис'}</button>
                         </div>
                     </div>
                 )}

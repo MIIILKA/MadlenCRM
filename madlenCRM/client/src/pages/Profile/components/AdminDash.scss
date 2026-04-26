@@ -1,0 +1,88 @@
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
+
+.admin-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+
+  &__stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    .a-stat-card {
+      @include glass;
+      padding: 20px; border-radius: 20px; display: flex; align-items: center; gap: 12px; border: 1px solid rgba($color-gold, 0.1);
+      .material-symbols-rounded {
+        font-size: 28px; padding: 10px; border-radius: 14px;
+        &.icon-rev { background: rgba(#4caf7d, 0.1); color: #4caf7d; }
+        &.icon-app { background: rgba($color-gold, 0.1); color: $color-gold; }
+        &.icon-staff { background: rgba(#c084fc, 0.1); color: #c084fc; }
+      }
+      .a-stat-info {
+        .label { font-size: 10px; color: $color-text-muted; text-transform: uppercase; font-weight: 700; }
+        .value { font-size: 1.4rem; font-weight: 800; color: #fff; }
+      }
+    }
+  }
+
+  &__controls {
+    h3 { font-size: 1rem; color: $color-gold; margin-bottom: 15px; font-weight: 600; }
+    .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .control-btn {
+      @include glass;
+      padding: 20px; border-radius: 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; color: #fff; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;
+      span { font-weight: 600; font-size: 14px; }
+      .material-symbols-rounded { color: $color-gold; font-size: 24px; }
+      &.special-btn { border-color: rgba($color-gold, 0.3); background: rgba($color-gold, 0.05); }
+      &:hover { border-color: $color-gold; transform: translateY(-2px); }
+    }
+  }
+
+  // СТИЛІ МОДАЛКИ-МЕНЕДЖЕРА
+  .manager-modal {
+    max-width: 450px !important;
+    .title-with-icon { display: flex; align-items: center; gap: 10px; h3 { margin: 0; } .material-symbols-rounded { color: $color-gold; } }
+
+    .manager-content {
+      padding-top: 10px;
+      .add-new-inline {
+        width: 100%; padding: 14px; border-radius: 12px; border: 1px dashed rgba($color-gold, 0.5); background: rgba($color-gold, 0.03);
+        color: $color-gold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 13px; margin-bottom: 15px;
+        &:hover { background: rgba($color-gold, 0.1); border-style: solid; }
+      }
+    }
+
+    .cat-list-scroll {
+      max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;
+      &::-webkit-scrollbar { width: 4px; }
+      &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    }
+
+    .cat-manage-item {
+      background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.05);
+      .color-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
+      .name { flex: 1; font-size: 14px; font-weight: 500; }
+      .actions {
+        display: flex; gap: 8px;
+        button {
+          background: none; border: none; color: #555; cursor: pointer; transition: 0.2s;
+          &:hover { color: $color-gold; }
+          &.del-btn:hover { color: #ff5e5e; }
+        }
+      }
+    }
+  }
+
+  // Другорядна модалка (поверх основної)
+  .modal-overlay.secondary { z-index: 10001; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); }
+
+  .color-picker-row {
+    display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin: 10px 0;
+    label { font-size: 13px; color: #aaa; }
+    .color-input-wrapper {
+      width: 30px; height: 30px; border-radius: 6px; overflow: hidden;
+      input { border: none; width: 150%; height: 150%; transform: translate(-20%,-20%); cursor: pointer; }
+    }
+  }
+}

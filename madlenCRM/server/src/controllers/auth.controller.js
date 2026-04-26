@@ -2,35 +2,53 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
+// --- ДОПОМІЖНА ФУНКЦІЯ ДЛЯ НОРМАЛІЗАЦІЇ НОМЕРА ---
+const normalizePhone = (phone) => {
+    if (!phone) return phone;
+    // Видаляємо все, крім цифр
+    let cleaned = phone.replace(/\D/g, '');
+
+    // Якщо номер починається з 0 (наприклад 068...) — додаємо 38
+    if (cleaned.length === 10 && cleaned.startsWith('0')) {
+        return `+38${cleaned}`;
+    }
+    // Якщо номер вже повний (380...) — просто додаємо плюс
+    if (cleaned.length === 12 && cleaned.startsWith('380')) {
+        return `+${cleaned}`;
+    }
+    // Якщо номер без 38 (наприклад 68...) — додаємо +380
+    if (cleaned.length === 9) {
+        return `+380${cleaned}`;
+    }
+
+    // Якщо нічого не підійшло, але цифр 12, просто ставимо +
+    return cleaned.length >= 12 ? `+${cleaned}` : phone;
+};
+
 // Реєстрація нового користувача
 exports.register = async (req, res) => {
-    console.log("--- ПОЧАТОК РЕЄСТРАЦІЇ ---");
-    console.log("Дані з фронтенду:", req.body);
-
     try {
-        const { name, loginValue, password } = req.body;
+        let { name, loginValue, password } = req.body;
 
         if (!name || !password || !loginValue) {
             return res.status(400).json({ message: "Заповніть усі поля" });
         }
 
-        // Визначаємо, що прийшло: email чи телефон
         const isEmail = loginValue.includes('@');
+
+        // Нормалізуємо, якщо це телефон
+        const finalLogin = isEmail ? loginValue : normalizePhone(loginValue);
 
         const newUser = new User({
             name,
-            password, // УВАГА: Для реального проекту додай bcrypt.hashSync(password, 10)
-            phone: !isEmail ? loginValue : undefined,
-            email: isEmail ? loginValue : undefined,
-            role: 'user' // Роль за замовчуванням
+            password,
+            phone: !isEmail ? finalLogin : undefined,
+            email: isEmail ? finalLogin : undefined,
+            role: 'user'
         });
 
-        console.log("Спроба збереження юзера в БД...");
         const savedUser = await newUser.save();
 
-        console.log("✅ ЮЗЕР УСПІШНО ЗБЕРЕЖЕНИЙ:", savedUser.name);
-
-        // Відразу створюємо токен, щоб юзер залогінився після реєстрації
         const token = jwt.sign(
             { id: savedUser._id, role: savedUser.role },
             process.env.JWT_SECRET,
@@ -49,42 +67,30 @@ exports.register = async (req, res) => {
         });
 
     } catch (err) {
-        if (err.code === 11000) {
-            console.log("❌ Помилка: такий юзер вже існує");
-            return res.status(400).json({ message: "Користувач з таким логіном вже існує" });
-        }
-        console.error("❌ ПОМИЛКА РЕЄСТРАЦІЇ:", err.message);
+        if (err.code === 11000) return res.status(400).json({ message: "Користувач вже існує" });
         res.status(500).json({ message: "Помилка сервера", error: err.message });
     }
 };
 
 // Логін користувача
 exports.login = async (req, res) => {
-    console.log("--- СПРОБА ВХОДУ ---");
     try {
-        const { loginValue, password } = req.body;
-        console.log("Логін:", loginValue);
+        let { loginValue, password } = req.body;
 
-        // Шукаємо або по телефону, або по пошті
+        const isEmail = loginValue.includes('@');
+        // Обов'язково нормалізуємо введений номер перед пошуком!
+        const searchLogin = isEmail ? loginValue : normalizePhone(loginValue);
+
         const user = await User.findOne({
             $or: [
-                { phone: loginValue },
-                { email: loginValue }
+                { phone: searchLogin },
+                { email: searchLogin }
             ]
         });
 
-        if (!user) {
-            console.log("❌ Користувача не знайдено в базі");
+        if (!user || user.password !== password) {
             return res.status(401).json({ message: "Невірний логін або пароль" });
         }
-
-        // Перевірка пароля (якщо без bcrypt — пряме порівняння)
-        if (user.password !== password) {
-            console.log("❌ Пароль не збігається для:", loginValue);
-            return res.status(401).json({ message: "Невірний логін або пароль" });
-        }
-
-        console.log("✅ Логін успішний! Роль юзера:", user.role);
 
         const token = jwt.sign(
             { id: user._id, role: user.role },
@@ -104,12 +110,10 @@ exports.login = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("❌ ПОМИЛКА ЛОГІНУ:", err.message);
         res.status(500).json({ message: "Помилка сервера" });
     }
 };
 
-// Перевірка токена (для ініціалізації додатку)
 exports.getMe = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');

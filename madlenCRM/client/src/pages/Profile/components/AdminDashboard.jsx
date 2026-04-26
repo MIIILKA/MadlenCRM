@@ -1,0 +1,181 @@
+import React, { useState, useEffect } from 'react';
+import api from '../../../api/';
+import './AdminDash.scss';
+
+export const AdminDashboard = () => {
+    const [stats, setStats] = useState({ totalRevenue: 0, appointmentsCount: 0, activeStaff: 0 });
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // Модалки
+    const [showManager, setShowManager] = useState(false); // Вікно зі списком
+    const [showEditModal, setShowEditModal] = useState(false); // Вікно створення/редагування
+    const [catForm, setCatForm] = useState({ name: '', color: '#D4AF37', id: null });
+
+    const fetchAdminData = async () => {
+        try {
+            const [statRes, staffRes, catRes] = await Promise.all([
+                api.get('/appointments/finance/stats').catch(() => ({ data: {} })),
+                api.get('/staff').catch(() => ({ data: [] })),
+                api.get('/categories').catch(() => ({ data: [] }))
+            ]);
+            setStats({
+                totalRevenue: statRes.data.totalEarnings || 0,
+                appointmentsCount: statRes.data.completedCount || 0,
+                activeStaff: staffRes.data.length
+            });
+            setCategories(catRes.data);
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
+    };
+
+    useEffect(() => { fetchAdminData(); }, []);
+
+    const handleOpenCreate = () => {
+        setCatForm({ name: '', color: '#D4AF37', id: null });
+        setShowEditModal(true);
+    };
+
+    const handleOpenEdit = (cat) => {
+        setCatForm({ name: cat.name, color: cat.color, id: cat._id });
+        setShowEditModal(true);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            if (catForm.id) {
+                await api.put(`/categories/${catForm.id}`, { name: catForm.name, color: catForm.color });
+            } else {
+                const slug = catForm.name.toLowerCase().trim().replace(/\s+/g, '-');
+                await api.post('/categories', { ...catForm, slug });
+            }
+            setShowEditModal(false);
+            fetchAdminData();
+        } catch (err) { alert("Помилка збереження"); }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Видалити колекцію?")) return;
+        try {
+            await api.delete(`/categories/${id}`);
+            fetchAdminData();
+        } catch (err) { alert("Помилка видалення"); }
+    };
+
+    if (loading) return <div className="loader">Оновлення...</div>;
+
+    return (
+        <div className="admin-dash">
+            {/* Статистика */}
+            <div className="admin-dash__stats-grid">
+                <div className="a-stat-card">
+                    <span className="material-symbols-rounded icon-rev">payments</span>
+                    <div className="a-stat-info">
+                        <span className="label">Дохід</span>
+                        <span className="value">{stats.totalRevenue.toLocaleString()} ₴</span>
+                    </div>
+                </div>
+                <div className="a-stat-card">
+                    <span className="material-symbols-rounded icon-app">event_available</span>
+                    <div className="a-stat-info">
+                        <span className="label">Записи</span>
+                        <span className="value">{stats.appointmentsCount}</span>
+                    </div>
+                </div>
+                <div className="a-stat-card">
+                    <span className="material-symbols-rounded icon-staff">group</span>
+                    <div className="a-stat-info">
+                        <span className="label">Команда</span>
+                        <span className="value">{stats.activeStaff}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Керування */}
+            <div className="admin-dash__controls">
+                <h3>Керування системою</h3>
+                <div className="controls-grid">
+                    <button className="control-btn" onClick={() => window.location.href='/calendar'}>
+                        <span className="material-symbols-rounded">calendar_month</span>
+                        <span>Календар</span>
+                    </button>
+                    <button className="control-btn special-btn" onClick={() => setShowManager(true)}>
+                        <span className="material-symbols-rounded">category</span>
+                        <span>Колекції послуг</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* 1. Модалка-менеджер (Список) */}
+            {showManager && (
+                <div className="modal-overlay" onClick={() => setShowManager(false)}>
+                    <div className="modal-box manager-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-box__header">
+                            <div className="title-with-icon">
+                                <span className="material-symbols-rounded">settings_suggest</span>
+                                <h3>Всі колекції</h3>
+                            </div>
+                            <button className="close-x" onClick={() => setShowManager(false)}>✕</button>
+                        </div>
+
+                        <div className="manager-content">
+                            <button className="add-new-inline" onClick={handleOpenCreate}>
+                                <span className="material-symbols-rounded">add</span> Додати нову категорію
+                            </button>
+
+                            <div className="cat-list-scroll">
+                                {categories.map(cat => (
+                                    <div key={cat._id} className="cat-manage-item">
+                                        <div className="color-dot" style={{ backgroundColor: cat.color }}></div>
+                                        <span className="name">{cat.name}</span>
+                                        <div className="actions">
+                                            <button onClick={() => handleOpenEdit(cat)} title="Редагувати">
+                                                <span className="material-symbols-rounded">edit</span>
+                                            </button>
+                                            <button onClick={() => handleDelete(cat._id)} title="Видалити" className="del-btn">
+                                                <span className="material-symbols-rounded">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 2. Модалка створення/редагування (другий рівень) */}
+            {showEditModal && (
+                <div className="modal-overlay secondary" onClick={() => setShowEditModal(false)}>
+                    <div className="modal-box admin-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-box__header">
+                            <h3>{catForm.id ? 'Налаштування' : 'Нова колекція'}</h3>
+                            <button onClick={() => setShowEditModal(false)}>✕</button>
+                        </div>
+                        <form className="modal-box__body modern-form" onSubmit={handleSubmit}>
+                            <div className="calc-field">
+                                <span>Назва</span>
+                                <input
+                                    type="text" className="calc-input" required
+                                    value={catForm.name}
+                                    onChange={e => setCatForm({...catForm, name: e.target.value})}
+                                />
+                            </div>
+                            <div className="color-picker-row">
+                                <label>Колір в системі</label>
+                                <div className="color-input-wrapper">
+                                    <input type="color" value={catForm.color} onChange={e => setCatForm({...catForm, color: e.target.value})} />
+                                </div>
+                            </div>
+                            <button type="submit" className="wh-save-btn">
+                                <span className="material-symbols-rounded">done_all</span>
+                                {catForm.id ? 'Зберегти зміни' : 'Створити'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
