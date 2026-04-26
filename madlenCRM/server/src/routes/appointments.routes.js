@@ -8,10 +8,9 @@ const appointmentController = require('../controllers/appointment.controller');
 const { authMiddleware, adminMiddleware, calendarAccessMiddleware } = require('../middleware/auth.middleware');
 
 // Роути для клієнтів та загальні
-router.post('/', authMiddleware, appointmentController.createAppointment);
+router.post('/', appointmentController.createAppointment);
 router.get('/slots', appointmentController.getBookedSlots);
 router.get('/my', authMiddleware, appointmentController.getClientAppointments);
-
 // Роути для майстрів
 router.get('/master', authMiddleware, appointmentController.getMasterAppointments);
 router.get('/staff/work-hours',  authMiddleware, appointmentController.getWorkHours);

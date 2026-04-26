@@ -3,6 +3,12 @@ const Staff = require('../models/Staff');
 const User = require('../models/User');
 const webpush = require('web-push'); // Переконайся, що бібліотека підключена
 const Service = require('../models/Service'); // ТУТ БУЛА ПОМИЛКА — ДОДАЙ ЦЕЙ РЯДОК
+
+const timeToMinutes = (timeStr) => {
+    if (!timeStr) return 0;
+    const [hrs, mins] = timeStr.split(':').map(Number);
+    return hrs * 60 + mins;
+};
 // 1. Отримати зайняті слоти та робочий графік
 exports.getBookedSlots = async (req, res) => {
     try {
@@ -38,39 +44,61 @@ exports.getBookedSlots = async (req, res) => {
 // 2. Створити новий запис (підтримує і клієнтський запис, і ручний з календаря)
 exports.createAppointment = async (req, res) => {
     try {
-        const { staff, service, clientName, phone, date, time, comment, duration } = req.body;
+        const { staff, service, clientName, phone, date, time, comment } = req.body;
 
-        const selectedService = await Service.findById(service);
+        const [selectedService, staffMember] = await Promise.all([
+            Service.findById(service),
+            Staff.findById(staff)
+        ]);
+
         if (!selectedService) return res.status(404).json({ message: "Послугу не знайдено" });
 
-        const finalDuration = duration || selectedService.duration || 20;
-        const finalCategory = selectedService.category || 'other';
+        // Рахуємо тривалість
+        const sId = selectedService._id.toString();
+        const finalDuration = Number(staffMember?.specializations?.[sId]) || Number(selectedService.duration) || 20;
+
+        const startNew = timeToMinutes(time);
+        const endNew = startNew + finalDuration;
+
+        // Перевірка на накладки
+        const existingApps = await Appointment.find({
+            staff, date, status: { $ne: 'cancelled' }
+        }).populate('service');
+
+        const hasOverlap = existingApps.some(app => {
+            const appStart = timeToMinutes(app.time);
+            const appEnd = appStart + (app.duration || 20);
+            const isOver = startNew < appEnd && endNew > appStart;
+
+            if (isOver) {
+                // На манікюр/візаж/стрижку — ЗАБОРОНЕНО накладати будь-що
+                const isStrict = /манікюр|візаж|стриж|makeup|manicure/i.test(selectedService.name) ||
+                    /манікюр|візаж|стриж|makeup|manicure/i.test(app.service?.name);
+                if (isStrict) return true;
+
+                // Якщо обидва не фарбування — заборонено
+                const isDye1 = /фарб|color|dye/i.test(selectedService.name);
+                const isDye2 = /фарб|color|dye/i.test(app.service?.name);
+                return !(isDye1 && isDye2);
+            }
+            return false;
+        });
+
+        if (hasOverlap) return res.status(400).json({ message: "Цей час уже зайнятий" });
 
         const newAppointment = new Appointment({
-            staff,
-            service,
-            clientName,
-            phone,
-            date,
-            time,
-            comment,
+            staff, service, clientName, phone, date, time, comment,
             duration: finalDuration,
-            category: finalCategory, // Оце поле тепер збережеться правильно
-            status: 'pending'
+            category: selectedService.category || 'other'
         });
 
         await newAppointment.save();
-
-        // Повертаємо дані, щоб фронт відразу бачив зміни
-        const populated = await Appointment.findById(newAppointment._id)
-            .populate('staff service');
-
-        res.status(201).json(populated);
+        res.status(201).json(newAppointment);
     } catch (error) {
-        console.error("CREATE ERROR:", error);
         res.status(500).json({ message: "Помилка сервера" });
     }
 };
+
 
 
 
@@ -188,55 +216,54 @@ exports.updateAppointment = async (req, res) => {
         const { id } = req.params;
         const { staff, time, date } = req.body;
 
-        // 1. Знаходимо запис, який хочемо перемістити
-        const movingApp = await Appointment.findById(id).populate('service');
+        const movingApp = await Appointment.findById(id).populate('service staff');
         if (!movingApp) return res.status(404).json({ message: "Запис не знайдено" });
 
-        // 2. Шукаємо, чи є вже хтось на цьому місці
-        const existingApps = await Appointment.find({
-            _id: { $ne: id }, // не враховуємо самого себе
-            staff: staff,
-            date: date,
-            time: time,
-            status: { $ne: 'cancelled' }
+        const sId = movingApp.service?._id?.toString();
+        const movingDuration = Number(movingApp.staff?.specializations?.[sId]) || Number(movingApp.duration) || 20;
+
+        const startNew = timeToMinutes(time);
+        const endNew = startNew + movingDuration;
+
+        // Шукаємо перетини
+        const dayApps = await Appointment.find({
+            staff, date, _id: { $ne: id }, status: { $ne: 'cancelled' }
         }).populate('service');
 
-        // 3. ЛОГІЧНА ПЕРЕВІРКА НАКЛАДОК
-        // 3. ЛОГІЧНА ПЕРЕВІРКА НАКЛАДОК
-        if (existingApps.length > 0) {
-            const movingServiceName = movingApp.service?.name?.toLowerCase() || '';
+        const hasOverlap = dayApps.some(app => {
+            const appSId = app.service?._id?.toString();
+            // Тут важливо: беремо тривалість кожного існуючого запису
+            const appDuration = Number(app.duration) || 20;
+            const startExisting = timeToMinutes(app.time);
+            const endExisting = startExisting + appDuration;
 
-            // Перевіряємо, чи це послуги, де НАКЛАДКИ ЗАБОРОНЕНІ (манікюр, візаж, стрижка)
-            const isStrictService = /манікюр|manicure|візаж|makeup|стриж|cut/i.test(movingServiceName);
+            const isOverlapping = startNew < endExisting && endNew > startExisting;
 
-            if (isStrictService) {
-                return res.status(400).json({ message: "Цей майстер не може прийняти двох клієнтів на цей час (манікюр/візаж)" });
+            if (isOverlapping) {
+                const name1 = (movingApp.service?.name || "").toLowerCase();
+                const name2 = (app.service?.name || "").toLowerCase();
+                const isDye1 = /фарб|color|dye/i.test(name1);
+                const isDye2 = /фарб|color|dye/i.test(name2);
+
+                // Якщо обидва — фарбування, дозволяємо. В іншому випадку — ЗАБОРОНА.
+                if (isDye1 && isDye2) return false;
+                return true;
             }
+            return false;
+        });
 
-            // Якщо це фарбування — залишаємо твою логіку (можна паралельно)
-            const isMovingDyeing = /фарб|color|малюв|dye/i.test(movingServiceName);
-            const isExistingDyeing = existingApps.some(app =>
-                /фарб|color|малюв|dye/i.test(app.service?.name || '')
-            );
-
-            if (!isMovingDyeing && !isExistingDyeing) {
-                return res.status(400).json({ message: "Цей час вже зайнятий" });
-            }
+        if (hasOverlap) {
+            return res.status(400).json({ message: "Накладка! Манікюр/візаж/стрижка мають бути окремо." });
         }
-        // 4. Оновлюємо
-        const updatedApp = await Appointment.findByIdAndUpdate(
-            id,
-            { staff, time, date },
-            { new: true }
-        ).populate('staff service client');
+
+        const updatedApp = await Appointment.findByIdAndUpdate(id, { staff, time, date }, { new: true })
+            .populate('staff service client');
 
         res.status(200).json(updatedApp);
     } catch (error) {
-        console.error("PATCH ERROR:", error);
         res.status(500).json({ message: "Помилка сервера", error: error.message });
     }
 };
-
 
 
 exports.getAllAppointments = async (req, res) => {
