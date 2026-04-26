@@ -149,8 +149,8 @@ export default function Booking() {
         setError('');
         try {
             await api.post('/appointments', {
-                service: selectedService._id, // ПРИБРАЛИ Id
-                staff:   selectedStaff._id,   // ПРИБРАЛИ Id
+                service: selectedService._id,
+                staff:   selectedStaff._id,
                 date:      formatDate(selectedDate),
                 time:      selectedTime,
                 comment,
