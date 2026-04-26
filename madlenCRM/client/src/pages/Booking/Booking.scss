@@ -234,7 +234,7 @@
   .step-actions {
     display: flex; gap: 20px; justify-content: center; margin-top: 40px;
     button { padding: 18px 45px; border-radius: 18px; font-weight: 800; cursor: pointer; transition: 0.3s; }
-    .btn-gold { @include gold-glow; background: $color-gold; color: #000; border: none; }
+    .btn-gold { @include gold-glow; background: $color-gold; color: #000; border: none; padding: 20px; }
     .btn-outline { background: transparent; border: 1px solid #333; color: #888; &:hover { color: #fff; border-color: #fff; } }
   }
 
