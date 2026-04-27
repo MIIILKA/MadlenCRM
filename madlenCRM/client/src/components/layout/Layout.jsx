@@ -6,6 +6,7 @@ import './Layout.scss'
 export default function Layout() {
     const { user, isAuthenticated, logout } = useAuthStore()
     const [collapsed, setCollapsed] = useState(false)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Стейт для мобільного меню
     const location = useLocation()
     const navigate = useNavigate()
 
@@ -23,12 +24,25 @@ export default function Layout() {
         ? ROLE_PERMISSIONS[user.role]?.nav || []
         : ['services']
 
+    // Функція для закриття меню при кліку на лінк (на мобайлі)
+    const handleLinkClick = () => {
+        if (window.innerWidth <= 1024) {
+            setIsSidebarOpen(false);
+        }
+    };
+
     return (
         <div className={`layout ${collapsed ? 'layout--collapsed' : ''}`}>
-            <aside className="sidebar">
+            {/* Оверлей для закриття мобільного меню */}
+            <div
+                className={`layout__overlay ${isSidebarOpen ? 'active' : ''}`}
+                onClick={() => setIsSidebarOpen(false)}
+            ></div>
+
+            <aside className={`sidebar ${isSidebarOpen ? 'sidebar--mobile-open' : ''}`}>
                 <div className="sidebar__logo">
                     <div className="sidebar__logo-mark">✦</div>
-                    {!collapsed && (
+                    {(!collapsed || isSidebarOpen) && (
                         <div className="sidebar__logo-text">
                             <span className="sidebar__logo-name">Madlen</span>
                             <span className="sidebar__logo-sub">CRM</span>
@@ -38,7 +52,7 @@ export default function Layout() {
 
                 <nav className="sidebar__nav">
                     <div className="sidebar__group">
-                        {!collapsed && <span className="sidebar__group-label">Main Menu</span>}
+                        {(!collapsed || isSidebarOpen) && <span className="sidebar__group-label">Main Menu</span>}
                         {ALL_LINKS.map(link => {
                             if (!allowedNav.includes(link.id)) return null
                             const isActive = location.pathname === link.path
@@ -46,10 +60,11 @@ export default function Layout() {
                                 <Link
                                     key={link.id}
                                     to={link.path}
+                                    onClick={handleLinkClick}
                                     className={`sidebar__link ${isActive ? 'sidebar__link--active' : ''}`}
                                 >
                                     <span className="material-symbols-rounded sidebar__link-icon">{link.icon}</span>
-                                    {!collapsed && <span className="sidebar__link-label">{link.label}</span>}
+                                    {(!collapsed || isSidebarOpen) && <span className="sidebar__link-label">{link.label}</span>}
                                 </Link>
                             )
                         })}
@@ -61,7 +76,10 @@ export default function Layout() {
                         <div className="sidebar__user-container">
                             <div
                                 className={`sidebar__user ${location.pathname === '/profile' ? 'sidebar__user--active' : ''}`}
-                                onClick={() => navigate('/profile')}
+                                onClick={() => {
+                                    navigate('/profile');
+                                    handleLinkClick();
+                                }}
                             >
                                 <div
                                     className="sidebar__user-avatar"
@@ -69,21 +87,18 @@ export default function Layout() {
                                 >
                                     {user.avatar ? <img src={`http://localhost:5000/${user.avatar}`} alt="av" /> : user.name?.charAt(0)}
                                 </div>
-                                {!collapsed && (
+                                {(!collapsed || isSidebarOpen) && (
                                     <div className="sidebar__user-info">
                                         <span className="sidebar__user-name">{user.name}</span>
                                         <span className="sidebar__user-role">{ROLE_PERMISSIONS[user.role]?.label}</span>
                                     </div>
                                 )}
-
                             </div>
-
-
                         </div>
                     ) : (
-                        <button className="sidebar__login-btn" onClick={() => navigate('/login')}>
+                        <button className="sidebar__login-btn" onClick={() => { navigate('/login'); handleLinkClick(); }}>
                             <span className="material-symbols-rounded">login</span>
-                            {!collapsed && <span>Увійти</span>}
+                            {(!collapsed || isSidebarOpen) && <span>Увійти</span>}
                         </button>
                     )}
 
@@ -98,10 +113,18 @@ export default function Layout() {
             <main className="layout__main">
                 <header className="topbar">
                     <div className="topbar__left">
-                        <h2 className="topbar__title">
-                            {ALL_LINKS.find(l => l.path === location.pathname)?.label || 'Madlen CRM'}
-                        </h2>
+                        {/* Показуємо бургер тільки на мобайлі */}
+                        <button className="burger-btn" onClick={() => setIsSidebarOpen(true)}>
+                            <span className="material-symbols-rounded">menu</span>
+                            <h2 className="topbar__title">
+                                {ALL_LINKS.find(l => l.path === location.pathname)?.label || 'Madlen CRM'}
+                            </h2>
+                        </button>
+
+
                     </div>
+
+
                     <div className="topbar__right">
                         <div className="topbar__actions">
                             <button className="topbar__btn"><span className="material-symbols-rounded">search</span></button>

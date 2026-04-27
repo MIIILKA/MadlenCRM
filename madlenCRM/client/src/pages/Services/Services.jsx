@@ -153,25 +153,35 @@ export default function Services() {
 
             <section className="location-section">
                 <div className="location-container">
-                    <div className="location-info">
-                        <h2 className="section-title">Контакти</h2>
-                        <div className="info-item">
-                            <span className="material-symbols-rounded">location_on</span>
-                            <div><h3>Адреса</h3><p>Львів, вул. Тернопільська, 21є</p></div>
-                        </div>
-                        <div className="info-item">
-                            <span className="material-symbols-rounded">schedule</span>
-                            <div><h3>Графік</h3><p>Пн-Сб: 10:00 - 19:00</p></div>
-                        </div>
-                        <div className="info-item">
-                            <span className="material-symbols-rounded">call</span>
-                            <div><h3>Телефон</h3><p>+380 (96) 402 15 30</p></div>
+                    <div className="location-info-card">
+                        <h2 className="contacts-title">Контакти</h2>
+                        <div className="info-grid">
+                            <div className="info-block">
+                                <span className="material-symbols-rounded icon-gold">location_on</span>
+                                <div className="text">
+                                    <h3>Адреса</h3>
+                                    <p>Львів, вул. Тернопільська, 21є</p>
+                                </div>
+                            </div>
+                            <div className="info-block">
+                                <span className="material-symbols-rounded icon-gold">schedule</span>
+                                <div className="text">
+                                    <h3>Графік</h3>
+                                    <p>Пн-Сб: 10:00 - 19:00</p>
+                                </div>
+                            </div>
+                            <div className="info-block">
+                                <span className="material-symbols-rounded icon-gold">call</span>
+                                <div className="text">
+                                    <h3>Телефон</h3>
+                                    <p>+380 (96) 402 15 30</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div className="map-box">
+                    <div className="map-wrapper">
                         <iframe
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2574.686561011833!2d24.0322!3d49.8145!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473ae7f6f5b9d5b9%3A0x7d6f5b9d5b9d5b9!2z0KLQtdGA0L3QvtC_0ZbQu9GM0YHRjNC60LAsIDIx0LUsINCb0YzQstGW0LIsINCb0YzQstGW0LLRgdGM0LrQsCDQvtCx0LvQsNGB0YLRjCwgNzkwMDA!5e0!3m2!1suk!2sua!4v1713821000000!5m2!1suk!2sua"
-                            width="100%"
+                            src="https://maps.google.com/maps?q=Студія%20краси%20Madlen%20Львів%20Тернопільська%2021є&t=&z=17&ie=UTF8&iwloc=&output=embed"                            width="100%"
                             height="100%"
                             style={{ border: 0 }}
                             allowFullScreen=""
@@ -180,6 +190,7 @@ export default function Services() {
                     </div>
                 </div>
             </section>
+
 
             <section className="staff-section">
                 <h2 className="section-title center">Наші майстри</h2>

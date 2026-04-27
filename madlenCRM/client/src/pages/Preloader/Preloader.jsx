@@ -1,30 +1,33 @@
 import React, { useEffect, useRef } from 'react';
 import './Preloader.scss';
-import logoVideo from '../../../public/logo_animated.mp4';
+
+// ПРИБЕРИ ЦЕЙ РЯДОК: import logoVideo from '../../public/logo_animated.mp4';
 
 const Preloader = ({ isFadeOut }) => {
     const videoRef = useRef(null);
 
     useEffect(() => {
         if (videoRef.current) {
-            // Пришвидшуємо в два рази, щоб вкласти кульмінацію в таймінг
-            videoRef.current.playbackRate = 2.0;
+            videoRef.current.playbackRate = 2.0; // Твоя швидкість х2
         }
     }, []);
 
     return (
         <div className={`preloader-overlay ${isFadeOut ? 'fade-out' : ''}`}>
-            <video
-                ref={videoRef}
-                src={logoVideo}
-                autoPlay
-                loop
-                muted
-                playsInline
-                disablePictureInPicture
-                className="preloader-video"
-            />
+            <div className="video-container">
+                <video
+                    ref={videoRef}
+                    src="/logo_animated.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    disablePictureInPicture
+                    className="preloader-video"
+                />
+            </div>
         </div>
     );
 };
+
 export default Preloader;

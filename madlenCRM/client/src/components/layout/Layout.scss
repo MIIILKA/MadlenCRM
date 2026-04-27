@@ -1,5 +1,4 @@
 @use "sass:color";
-
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
@@ -9,12 +8,27 @@
   height: 100vh;
   overflow: hidden;
   background: $color-bg;
-  position: relative; // Додано для мобільного позиціонування
+  position: relative;
 
   --sidebar-w: #{$sidebar-width};
 
   &--collapsed {
     --sidebar-w: 68px;
+  }
+
+  // Оверлей для мобільного меню
+  &__overlay {
+    display: none;
+    &.active {
+      @media (max-width: 1024px) {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 95;
+      }
+    }
   }
 }
 
@@ -29,10 +43,10 @@
   flex-direction: column;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
   min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-  left 0.3s ease; // Додано для мобільного виїзду
+  left 0.3s ease;
   overflow: hidden;
   position: relative;
-  z-index: 100; // Піднято для перекриття на мобайлі
+  z-index: 100;
 
   &::before {
     content: '';
@@ -40,6 +54,26 @@
     top: 0; left: 0; right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, $color-gold, transparent);
+  }
+
+  // Адаптив для мобілок
+  @media (max-width: 1024px) {
+    position: fixed;
+    left: -300px; // Сховано за край
+    top: 0;
+    bottom: 0;
+    width: 280px !important;
+    min-width: 280px !important;
+    box-shadow: none;
+
+    &--mobile-open {
+      left: 0 !important;
+      box-shadow: 20px 0 50px rgba(0,0,0,0.6);
+    }
+
+    .sidebar__collapse-toggle {
+      display: none; // Немає сенсу колапсити на мобайлі
+    }
   }
 }
 
@@ -61,12 +95,6 @@
   border-radius: $radius-sm;
   @include flex(row, center, center);
   box-shadow: 0 0 16px rgba($color-gold, 0.3);
-}
-
-.sidebar__logo-icon {
-  font-size: 16px;
-  color: #0F0F13;
-  font-weight: 700;
 }
 
 .sidebar__logo-text {
@@ -97,7 +125,6 @@
   overflow-x: hidden;
   padding: $spacing-md 0;
   @include scrollbar-thin;
-
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
@@ -141,14 +168,7 @@
   &--active {
     background: rgba($color-gold, 0.1);
     color: $color-gold;
-
-    .sidebar__link-indicator {
-      opacity: 1;
-    }
-
-    .sidebar__link-icon {
-      color: $color-gold;
-    }
+    .sidebar__link-icon { color: $color-gold; }
   }
 }
 
@@ -166,16 +186,6 @@
   overflow: hidden;
 }
 
-.sidebar__link-indicator {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: $color-gold;
-  opacity: 0;
-  transition: opacity 0.15s;
-  flex-shrink: 0;
-}
-
 // Footer
 .sidebar__footer {
   border-top: 1px solid $color-border;
@@ -183,7 +193,6 @@
   @include flex(column, stretch, flex-end);
   gap: $spacing-xs;
   flex-shrink: 0;
-
 }
 
 .sidebar__user-container {
@@ -218,19 +227,8 @@
   border-top: 1px solid $color-border;
   padding-top: $spacing-xs;
   margin-top: $spacing-xs;
+  border-left: none; border-right: none; border-bottom: none;
   &:hover { background: rgba($color-text, 0.05); color: $color-text; }
-}
-
-.layout--collapsed {
-  .sidebar__footer {
-    align-items: center;
-  }
-  .sidebar__user-container {
-    align-items: center;
-  }
-  .sidebar__collapse-toggle {
-    align-self: center;
-  }
 }
 
 .sidebar__user {
@@ -238,23 +236,15 @@
   gap: $spacing-sm;
   overflow: hidden;
   flex: 1;
-  padding: $spacing-xs $spacing-xs;
+  padding: $spacing-xs;
   border-radius: $radius-sm;
   cursor: pointer;
   transition: background 0.15s;
 
-  &:hover {
-    background: rgba($color-text, 0.05);
-  }
+  &:hover { background: rgba($color-text, 0.05); }
+  &--active { background: rgba($color-gold, 0.08); }
+}
 
-  &--active {
-    background: rgba($color-gold, 0.08);
-  }
-}
-.topbar__actions{
-  display: flex;
-  flex-direction: row;
-}
 .sidebar__user-avatar {
   min-height: 32px;
   min-width: 32px;
@@ -264,6 +254,8 @@
   font-size: 13px;
   font-weight: 700;
   color: #0F0F13;
+  overflow: hidden;
+  img { width: 100%; height: 100%; object-fit: cover; }
 }
 
 .sidebar__user-info {
@@ -283,28 +275,6 @@
   color: $color-text-muted;
 }
 
-.sidebar__collapse-btn {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: $radius-sm;
-  border: 1px solid $color-border;
-  background: transparent;
-  color: $color-text-muted;
-  @include flex(row, center, center);
-  transition: background 0.15s, color 0.15s;
-  flex-shrink: 0;
-
-  &:hover {
-    background: rgba($color-text, 0.08);
-    color: $color-text;
-  }
-
-  .material-symbols-rounded {
-    font-size: 18px;
-  }
-}
-
 // ─── Main Area ─────────────────────────────────────────────────────────────────
 .layout__main {
   flex: 1;
@@ -320,13 +290,16 @@
   min-height: 64px;
   @include flex(row, center, space-between);
   padding: 0 $spacing-xl;
-  border-bottom: 1px solid $color-border;
   background: rgba($color-bg, 0.8);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 5;
   gap: $spacing-md;
+
+  @media (max-width: 1024px) {
+    padding: 0 $spacing-md;
+  }
 }
 
 .topbar__left {
@@ -334,6 +307,20 @@
   gap: $spacing-md;
 }
 
+.burger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: $color-gold;
+  padding: 0;
+  align-items: center;      // ← замість @include flex(...)
+  justify-content: center;  // ← просто без display: flex
+  cursor: pointer;
+
+  @media (max-width: 1024px) {
+    display: flex;           // ← тільки тут вмикаємо flex
+  }
+}
 .topbar__title {
   font-size: 18px;
   font-weight: 600;
@@ -344,6 +331,11 @@
 .topbar__right {
   @include flex(row, center, flex-end);
   gap: $spacing-sm;
+}
+
+.topbar__actions {
+  display: flex;
+  flex-direction: row;
 }
 
 .topbar__btn {
@@ -360,10 +352,6 @@
   &:hover {
     background: rgba($color-text, 0.06);
     color: $color-text;
-  }
-
-  .material-symbols-rounded {
-    font-size: 20px;
   }
 }
 
@@ -382,184 +370,28 @@
   border: 2px solid $color-bg;
 }
 
-.topbar__divider {
-  width: 1px;
-  height: 24px;
-  background: $color-border;
-  margin: 0 $spacing-xs;
-}
-
-.topbar__profile {
-  @include flex(row, center, flex-start);
-  gap: $spacing-sm;
-  padding: 6px $spacing-sm;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: background 0.15s;
-
-  &:hover {
-    background: rgba($color-text, 0.06);
-  }
-}
-
-.topbar__avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, $color-gold, color.adjust($color-gold, $lightness: -20%, $space: hsl));
-  @include flex(row, center, center);
-  font-size: 12px;
-  font-weight: 700;
-  color: #0F0F13;
-}
-
-.topbar__profile-name {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: $color-text;
-}
-
-.topbar__chevron {
-  font-size: 18px !important;
-  color: $color-text-muted;
-}
-
 // ─── Content ───────────────────────────────────────────────────────────────────
 .layout__content {
   flex: 1;
   overflow-y: auto;
   padding: $spacing-xl;
   @include scrollbar-thin;
-}
 
-.sidebar__logout-btn {
-  @include flex(row, center, flex-start);
-  gap: $spacing-sm;
-  width: 100%;
-  background: transparent;
-  color: $color-text-muted;
-  border: none;
-  padding: 7px $spacing-xs;
-  border-radius: $radius-sm;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-
-  .material-symbols-rounded {
-    font-size: 18px;
-  }
-
-  &:hover {
-    background: rgba(255, 77, 77, 0.08);
-    color: #ff4d4d;
-  }
-}
-
-.sidebar__mini-btn {
-  width: 36px;
-  height: 36px;
-  @include flex(row, center, center);
-  background: transparent;
-  color: $color-text-muted;
-  border: none;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-
-  .material-symbols-rounded {
-    font-size: 18px;
-  }
-
-  &:hover {
-    background: rgba(255, 77, 77, 0.08);
-    color: #ff4d4d;
-  }
-}
-
-// ==============================================================================
-// ─── ФІНАЛЬНА АДАПТИВНА ВЕРСТКА (ТІЛЬКИ ДОДАНО) ──────────────────────────────
-// ==============================================================================
-
-@media (max-width: 1024px) {
-  .layout {
-    &__overlay {
-      &.active {
-        display: block;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-        z-index: 95;
-      }
-    }
-  }
-
-  .sidebar {
-    position: fixed;
-    left: calc(var(--sidebar-w) * -1); // Ховаємо за край екрана
-    top: 0;
-    bottom: 0;
-    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    // Клас для відкриття шторки на мобайлі
-    &--mobile-open {
-      left: 0 !important;
-      box-shadow: 20px 0 50px rgba(0,0,0,0.5);
-    }
-  }
-
-  .topbar {
-    padding: 0 $spacing-md;
-    height: 60px;
-    min-height: 60px;
-  }
-
-  .topbar__left {
-    .burger-btn {
-      display: flex !important; // Показуємо бургер тільки тут
-      background: none;
-      color: $color-gold;
-      cursor: pointer;
-    }
-  }
-
-  .layout__content {
+  @media (max-width: 1024px) {
     padding: $spacing-md;
-    // Підтримка Safe Areas для iPhone
     padding-bottom: calc($spacing-md + env(safe-area-inset-bottom));
   }
 }
 
-@media (max-width: 768px) {
-  .topbar__profile-name,
-  .topbar__divider,
-  .topbar__chevron {
-    display: none !important; // Ховаємо зайве на малих екранах
-  }
-
-  .topbar__profile {
-    padding: 0;
-    background: none !important;
-  }
-
-  .sidebar {
-    --sidebar-w: 260px; // Робимо меню зручним для пальця
-  }
-}
-
+// ─── Mobile Specific Tweaks ────────────────────────────────────────────────────
 @media (max-width: 480px) {
   .topbar__title {
-    font-size: 15px;
-    max-width: 150px;
+    font-size: 16px;
+    max-width: 140px;
     @include truncate;
   }
 
-  .topbar__right {
-    gap: $spacing-xs;
-  }
-
-  .sidebar__logo {
-    padding: $spacing-md;
+  .topbar__right .topbar__btn:first-child {
+    display: none; // Ховаємо пошук на самих малих екранах для місця
   }
 }

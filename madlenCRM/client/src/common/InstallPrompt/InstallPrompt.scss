@@ -1,35 +1,65 @@
 .ios-prompt {
   position: fixed;
-  bottom: 20px;
+  bottom: 25px; // Трохи підняв, щоб не перекривало системні жести
   left: 50%;
   transform: translateX(-50%);
   width: 90%;
   max-width: 350px;
-  background: rgba(26, 26, 26, 0.95);
-  border: 1px solid #D4AF37; // Наш золотий колір
-  border-radius: 15px;
-  padding: 15px;
-  z-index: 9999;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  background: rgba(20, 20, 20, 0.98); // Глибокий темний
+  border: 1px solid #D4AF37;
+  border-radius: 20px; // Більш заокруглені краї виглядають сучасніше
+  padding: 20px;
+  z-index: 1000000;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.6);
   color: #fff;
+  backdrop-filter: blur(10px); // Ефект матового скла
 
   &__content {
     position: relative;
-    font-size: 14px;
+    font-size: 15px;
+    line-height: 1.4;
 
-    p { margin-bottom: 10px; }
+    p {
+      margin-bottom: 15px;
+      padding-right: 25px; // Щоб текст не налізав на хрестик
+    }
     strong { color: #D4AF37; }
+  }
+
+  // --- СТИЛЬНИЙ ХРЕСТИК ---
+  .close-btn {
+    position: absolute;
+    top: -10px;    // Трохи вище тексту
+    right: -10px;  // В самий кут
+    background: none;
+    border: none;
+    color: #D4AF37; // Золотий колір
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    padding: 10px; // Збільшуємо зону кліку (важливо для пальців)
+    transition: opacity 0.2s;
+
+    &:active {
+      opacity: 0.5;
+    }
   }
 
   .instructions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    font-size: 13px;
-    color: #ccc;
+    gap: 12px;
+    font-size: 14px;
+    color: #eee;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
   }
 
-  // Стрілочка, що вказує вниз на кнопку Safari
   &__arrow {
     position: absolute;
     bottom: -10px;
