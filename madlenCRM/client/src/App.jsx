@@ -44,7 +44,7 @@ function AppContent() {
             subscribeToNotifications();
         }
     }, [user]);
-
+//
     useEffect(() => {
         setIsLoading(true);
         setIsFadeOut(false);

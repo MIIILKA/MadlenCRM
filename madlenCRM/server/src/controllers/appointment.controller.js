@@ -196,7 +196,7 @@ exports.getFinanceStats = async (req, res) => {
             staff: staffId,
             status: { $ne: 'cancelled' }
         }).populate('service', 'price');
-
+//ff
         const stats = appointments.reduce((acc, app) => {
             // Створюємо об'єкт дати запису для порівняння
             // app.date (YYYY-MM-DD) + app.time (HH:mm)
