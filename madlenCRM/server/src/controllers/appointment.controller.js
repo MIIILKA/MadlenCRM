@@ -44,7 +44,8 @@ exports.getBookedSlots = async (req, res) => {
 // 2. Створити новий запис (підтримує і клієнтський запис, і ручний з календаря)
 exports.createAppointment = async (req, res) => {
     try {
-        const { staff, service, clientName, phone, date, time, comment } = req.body;
+        // Отримуємо client з тіла запиту (його пришле фронтенд)
+        const { staff, service, client, clientName, phone, date, time, comment } = req.body;
 
         const [selectedService, staffMember] = await Promise.all([
             Service.findById(service),
@@ -53,7 +54,7 @@ exports.createAppointment = async (req, res) => {
 
         if (!selectedService) return res.status(404).json({ message: "Послугу не знайдено" });
 
-        // Рахуємо тривалість
+        // Рахуємо тривалість на основі спеціалізації майстра
         const sId = selectedService._id.toString();
         const finalDuration = Number(staffMember?.specializations?.[sId]) || Number(selectedService.duration) || 20;
 
@@ -62,39 +63,54 @@ exports.createAppointment = async (req, res) => {
 
         // Перевірка на накладки
         const existingApps = await Appointment.find({
-            staff, date, status: { $ne: 'cancelled' }
+            staff,
+            date,
+            status: { $ne: 'cancelled' }
         }).populate('service');
 
         const hasOverlap = existingApps.some(app => {
             const appStart = timeToMinutes(app.time);
-            const appEnd = appStart + (app.duration || 20);
-            const isOver = startNew < appEnd && endNew > appStart;
+            const appEnd = appStart + (Number(app.duration) || 20);
+            const isOver = startNew < appEnd && endNew > startStart;
 
             if (isOver) {
-                // На манікюр/візаж/стрижку — ЗАБОРОНЕНО накладати будь-що
-                const isStrict = /манікюр|візаж|стриж|makeup|manicure/i.test(selectedService.name) ||
-                    /манікюр|візаж|стриж|makeup|manicure/i.test(app.service?.name);
+                const name1 = (selectedService.name || "").toLowerCase();
+                const name2 = (app.service?.name || "").toLowerCase();
+
+                // Якщо хоча б одна послуга — манікюр/візаж/стрижка, накладка ЗАБОРОНЕНА
+                const isStrict = /манікюр|візаж|стриж|makeup|manicure/i.test(name1) ||
+                    /манікюр|візаж|стриж|makeup|manicure/i.test(name2);
                 if (isStrict) return true;
 
-                // Якщо обидва не фарбування — заборонено
-                const isDye1 = /фарб|color|dye/i.test(selectedService.name);
-                const isDye2 = /фарб|color|dye/i.test(app.service?.name);
+                // Дозволяємо тільки якщо обидва — фарбування
+                const isDye1 = /фарб|color|dye/i.test(name1);
+                const isDye2 = /фарб|color|dye/i.test(name2);
                 return !(isDye1 && isDye2);
             }
             return false;
         });
 
-        if (hasOverlap) return res.status(400).json({ message: "Цей час уже зайнятий" });
+        if (hasOverlap) return res.status(400).json({ message: "Цей час уже зайнятий!" });
 
+        // СТВОРЕННЯ ОБ'ЄКТА
         const newAppointment = new Appointment({
-            staff, service, clientName, phone, date, time, comment,
+            staff,
+            service,
+            client: client || null,
+            clientName,
+            phone,
+            date,
+            time,
+            comment,
             duration: finalDuration,
-            category: selectedService.category || 'other'
+            category: selectedService.category || 'other',
+            status: 'pending'
         });
 
         await newAppointment.save();
         res.status(201).json(newAppointment);
     } catch (error) {
+        console.error("CREATE ERROR:", error);
         res.status(500).json({ message: "Помилка сервера" });
     }
 };

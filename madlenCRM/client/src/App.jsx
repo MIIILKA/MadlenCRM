@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import api from './api';
 import { InstallPrompt } from "./common/InstallPrompt/InstallPrompt.jsx";
 import { useAuthStore } from './store/authStore.js';
@@ -12,14 +12,13 @@ import Calendar from './pages/Calendar/Calendar';
 import Booking from './pages/Booking/Booking';
 import Profile from './pages/Profile/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
+import Preloader from './pages/Preloader/Preloader'; // Імпортуй новий компонент
 
-// Функція конвертації ключа
+// Допоміжна функція для VAPID
 function urlBase64ToUint8Array(base64String) {
     try {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding)
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
         const rawData = window.atob(base64);
         const outputArray = new Uint8Array(rawData.length);
         for (let i = 0; i < rawData.length; ++i) {
@@ -32,27 +31,39 @@ function urlBase64ToUint8Array(base64String) {
     }
 }
 
-export default function App() {
+// Створюємо окремий компонент для контенту, щоб мати доступ до useLocation
+function AppContent() {
     const { user } = useAuthStore();
+    const location = useLocation();
+    const [isLoading, setIsLoading] = useState(true);
+    const [isFadeOut, setIsFadeOut] = useState(false);
 
+    // 1. Ефект для Push-повідомлень
     useEffect(() => {
-        if (user) {
-            // Якщо дозвіл вже є (Allowed), підписуємо мовчки
-            if (Notification.permission === 'granted') {
-                subscribeToNotifications();
-            } else {
-                console.log("--- 🚀 PUSH: Чекаю на ручний дозвіл або клік юзера ---");
-            }
+        if (user && Notification.permission === 'granted') {
+            subscribeToNotifications();
         }
     }, [user]);
 
+    useEffect(() => {
+        setIsLoading(true);
+        setIsFadeOut(false);
+
+        // 1.5 секунди активної фази
+        const timer = setTimeout(() => {
+            setIsFadeOut(true);
+            setTimeout(() => setIsLoading(false), 500);
+        }, 700);
+
+        return () => clearTimeout(timer);
+    }, [location.pathname]);
+
+
     async function subscribeToNotifications() {
         if (!('serviceWorker' in navigator)) return;
-
         try {
             const registration = await navigator.serviceWorker.register('/sw.js');
             await navigator.serviceWorker.ready;
-
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') return;
 
@@ -64,17 +75,17 @@ export default function App() {
                 applicationServerKey: convertedKey
             });
 
-            console.log("✅ Підписка отримана:", subscription);
             await api.post('/auth/subscribe', subscription);
-            console.log("✅ Дані в БД");
-
+            console.log("✅ Push підписка оновлена");
         } catch (err) {
             console.error("❌ Помилка Push:", err);
         }
     }
 
     return (
-        <BrowserRouter>
+        <>
+            {isLoading && <Preloader isFadeOut={isFadeOut} />}
+
             <InstallPrompt />
             <Routes>
                 <Route path="/login" element={<Login />} />
@@ -94,6 +105,14 @@ export default function App() {
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+        </>
+    );
+}
+
+export default function App() {
+    return (
+        <BrowserRouter>
+            <AppContent />
         </BrowserRouter>
     );
 }

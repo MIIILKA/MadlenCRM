@@ -1,0 +1,33 @@
+.preloader-overlay {
+  position: fixed;
+  inset: 0;
+  // Колір "антрацит" або "глибокий графіт" — приємніший за чистий чорний
+  background-color: #0a0a0a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999;
+  transition: opacity 0.5s ease;
+
+  &.fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.preloader-video {
+  width: 320px;
+  height: auto;
+  object-fit: contain;
+
+  /* Фільтри для ідеального MS:
+     invert(1) - робить фон темним
+     contrast(1.4) - змушує сяйво MS "вистрілювати"
+     brightness(1.2) - додає енергії анімації
+  */
+  filter: invert(1) contrast(1.4) brightness(1.2) hue-rotate(185deg);
+
+  @media (max-width: 480px) {
+    width: 75%;
+  }
+}

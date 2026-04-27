@@ -80,47 +80,44 @@ export default function Services() {
 
         try {
             let payload;
+            let config = {};
 
             if (modalMode === 'staff') {
-                if (!formData.phone || formData.phone.length !== 13) {
-                    alert("Помилка: Номер має бути у форматі +380XXXXXXXXX");
-                    return;
-                }
                 payload = new FormData();
                 payload.append('name', formData.name);
                 payload.append('phone', formData.phone);
                 payload.append('role', formData.role);
                 if (formData.email) payload.append('email', formData.email);
-                if (formData.avatar instanceof File) payload.append('avatar', formData.avatar);
+                if (formData.avatar instanceof File) {
+                    payload.append('avatar', formData.avatar);
+                }
+                // Важливо: дозволяємо браузеру самому встановити multipart boundary
+                config = { headers: { 'Content-Type': undefined } };
             } else {
-                // ФІКС: Отримуємо ID обраної категорії з масиву categories
                 const selectedCat = categories.find(c => c.slug === formData.category || c._id === formData.category);
-
                 payload = {
                     name: formData.name,
                     price: Number(formData.price),
                     duration: Number(formData.duration),
-                    // Шлемо саме ID об'єкта, щоб бекенд прийняв його як посилання
                     category: selectedCat ? selectedCat._id : formData.category,
                     description: formData.description
                 };
             }
 
-            if (editId) {
-                await api.put(`${endpoint}/${editId}`, payload);
-            } else {
-                await api.post(endpoint, payload);
-            }
+            const response = editId
+                ? await api.put(`${endpoint}/${editId}`, payload, config)
+                : await api.post(endpoint, payload, config);
 
             setShowModal(false);
             fetchData();
         } catch (err) {
-            console.error("❌ Помилка збереження:", err.response?.data || err.message);
-            // Виводимо детальну помилку з сервера, щоб знати, що не так у моделі
-            const serverMsg = err.response?.data?.message || "Не вдалося зберегти дані";
+            console.error("❌ Помилка:", err.response?.data);
+            const serverMsg = err.response?.data?.details || err.response?.data?.message || err.message;
             alert(`Помилка збереження: ${serverMsg}`);
         }
     };
+
+
 
 
 

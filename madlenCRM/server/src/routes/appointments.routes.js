@@ -21,5 +21,6 @@ router.get('/finance/stats', authMiddleware, adminMiddleware, appointmentControl
 
 // Замість adminMiddleware ставимо calendarAccessMiddleware
 router.get('/all', authMiddleware, calendarAccessMiddleware, appointmentController.getAllAppointments);
-router.patch('/:id', authMiddleware, calendarAccessMiddleware, appointmentController.updateAppointment);
+router.patch('/:id', appointmentController.updateAppointment);
+
 module.exports = router;

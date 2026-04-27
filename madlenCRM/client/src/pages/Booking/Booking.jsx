@@ -154,6 +154,8 @@ export default function Booking() {
                 date:      formatDate(selectedDate),
                 time:      selectedTime,
                 comment,
+                // ДОДАЙ ЦЕЙ РЯДОК:
+                client: user?.id || user?._id || user?.staffId
             });
             setSuccess(true);
         } catch (err) {

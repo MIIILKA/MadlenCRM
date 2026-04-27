@@ -9,7 +9,7 @@ export default function Calendar() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(true);
     const [dragOverSlot, setDragOverSlot] = useState(null); // { staffId, time, onApp? }
-
+    const [categories, setCategories] = useState([]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newApp, setNewApp] = useState({ staff: '', time: '', clientName: '', phone: '+380', service: '', comment: '' });
@@ -61,17 +61,45 @@ export default function Calendar() {
         api.get('/services').then(res => setServices(res.data));
     }, [selectedDate]);
 
+    // Додай цей стейт до інших
+
     const fetchData = async () => {
         try {
-            const [staffRes, appsRes] = await Promise.all([
+            const [staffRes, appsRes, catRes] = await Promise.all([
                 api.get('/staff'),
-                api.get('/appointments/all')
+                api.get('/appointments/all'),
+                api.get('/categories').catch(() => ({ data: [] })) // Захист від помилки 404
             ]);
             setStaff(staffRes.data);
             setAppointments(appsRes.data);
+            setCategories(catRes.data); // Тепер категорії будуть у стейті
             setLoading(false);
-        } catch (err) { setLoading(false); }
+        } catch (err) {
+            console.error("Помилка завантаження даних:", err);
+            setLoading(false);
+        }
     };
+
+    const filteredByStatusAndCategory = React.useMemo(() => {
+        return appointments.filter(a => {
+            if (a.status === 'cancelled') return false;
+            if (filterCategory === 'all') return true;
+
+            // Бекенд повертає плоскі поля, не вкладений об'єкт
+            const appCategoryName = (a.categoryName || "").toLowerCase().trim();
+
+            // filterCategory — це _id категорії (з select)
+            // Знаходимо категорію по _id і порівнюємо name
+            const selectedCat = categories.find(c => c._id === filterCategory);
+            if (!selectedCat) return false;
+
+            return appCategoryName === selectedCat.name.toLowerCase().trim();
+        });
+    }, [appointments, filterCategory, categories]);
+
+
+
+
 
     // Телефонна маска
     const handlePhoneChange = (e) => {
@@ -160,7 +188,8 @@ export default function Calendar() {
         const y = pickerMonth.getFullYear();
         const m = String(pickerMonth.getMonth() + 1).padStart(2, '0');
         const d = String(day).padStart(2, '0');
-        setSelectedDate(`${y}-${m}-${d}`);
+        const newDate = `${y}-${m}-${d}`; // Рядок "2026-04-27"
+        setSelectedDate(newDate);
         setShowDatePicker(false);
     };
 
@@ -183,22 +212,25 @@ export default function Calendar() {
     const getAppStyles = (app, master, allMasterApps, dragOverSlot) => {
         if (!app || !app.time) return { display: 'none' };
 
-        // 1. Отримуємо ID (пробуємо всі варіанти, де він може ховатися)
+        // --- ФІКС ДАТИ (UTC/Timezone issue) ---
+        // Порівнюємо ТІЛЬКИ як рядки "2026-04-27" === "2026-04-27"
+        // Не створюємо new Date(), щоб уникнути зміщення часового поясу Львова
+        const appDateStr = String(app.date).split('T')[0].trim();
+        const selectedDateStr = String(selectedDate).split('T')[0].trim();
+
+        if (appDateStr !== selectedDateStr) {
+            return { display: 'none' };
+        }
+        // ---------------------------------------
+
+        // 1. Отримуємо ID послуги
         const serviceId = (app.serviceId || app.service?._id || app.service || "").toString();
 
-        console.log(`[DEBUG] Перевірка для ${app.clientName}: serviceId = "${serviceId}"`);
-
-        // 2. Шукаємо в майстра
+        // 2. Шукаємо тривалість у майстра
         const masterCustomDuration = master?.specializations ? master.specializations[serviceId] : null;
-
         const duration = Number(masterCustomDuration) || Number(app.duration) || 20;
-        // --- ЛОГУВАННЯ ДЛЯ ПЕРЕВІРКИ ---
-        if (masterCustomDuration) {
-            console.log(`✅ ТЕКСТ ЗЧИТАНО: ${app.clientName} отримує ${duration}хв від майстра ${master.name}`);
-        } else {
-            console.warn(`⚠️ НЕ ЗЧИТАНО: Для послуги ${serviceId} у майстра ${master.name} немає спец-часу.`);
-        }
 
+        // Розрахунок позиції по вертикалі (час)
         const [h, m] = app.time.split(':').map(Number);
         const startMins = h * 60 + m;
         const startFromDayStart = (h - START_HOUR) * 60 + m;
@@ -207,15 +239,20 @@ export default function Calendar() {
         const top = (startFromDayStart / 20) * CELL_HEIGHT;
         const height = (duration / 20) * CELL_HEIGHT;
 
-        // Решта логіки (накладки, колір)
+        // Логіка накладок
         const isDyeing = /фарб|color|малюв|dye/i.test(app.serviceName || app.service?.name || '');
 
         const overlaps = allMasterApps.filter(other => {
             if (other._id === app._id || !other.time) return false;
+
+            // Також перевіряємо дату для накладок (на всякий випадок)
+            if (String(other.date).split('T')[0] !== appDateStr) return false;
+
             const [oh, om] = other.time.split(':').map(Number);
             const oStart = oh * 60 + om;
             const oServiceId = (other.service?._id || other.service || "").toString();
             const oDuration = Number(master?.specializations?.[oServiceId]) || Number(other.duration) || 20;
+
             return startMins < (oStart + oDuration) && endMins > oStart;
         });
 
@@ -248,7 +285,6 @@ export default function Calendar() {
             width: width,
             left: left,
             zIndex: zIndex,
-            // Використовуємо колір, який прийшов з бекенду (categoryColor)
             backgroundColor: `${app.categoryColor || '#D4AF37'}25`,
             borderLeft: `4px solid ${app.categoryColor || '#D4AF37'}`
         };
@@ -257,32 +293,48 @@ export default function Calendar() {
 
     const handleDrop = async (e, targetStaffId, targetTime) => {
         e.preventDefault();
-        const appId = e.dataTransfer.getData("appId");
-        if (!appId) return;
+        const appId = e.dataTransfer.setData ? e.dataTransfer.getData("appId") : null;
+        // Якщо setData не спрацював, спробуємо стандартний метод
+        const id = appId || e.dataTransfer.getData("text/plain");
 
-        const draggingApp = appointments.find(a => a._id === appId);
+        if (!id) return;
+
+        const draggingApp = appointments.find(a => a._id === id);
         if (!draggingApp) return;
 
+        // 1. ПРИМУСОВА НОРМАЛІЗАЦІЯ ДАТИ (Фікс "впиздуватого" зміщення)
+        let finalDateToSend = selectedDate;
+        if (selectedDate instanceof Date) {
+            const y = selectedDate.getFullYear();
+            const mon = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            finalDateToSend = `${y}-${mon}-${d}`;
+        } else if (typeof selectedDate === 'string') {
+            finalDateToSend = selectedDate.split('T')[0];
+        }
+
+        // 2. Розрахунок часу
         const [h, m] = targetTime.split(':').map(Number);
         const newStart = h * 60 + m;
-
-        // ОГОЛОШУЄМО duration ТУТ
         const currentDuration = Number(draggingApp.duration) || 20;
         const newEnd = newStart + currentDuration;
 
-        const masterApps = appointments.filter(a =>
-            (a.staff?._id || a.staff || a.staffId || "").toString() === targetStaffId.toString() &&
-            a.date === selectedDate &&
-            a._id !== appId
-        );
+        // 3. Фільтрація записів поточного майстра на вибрану дату
+        const masterApps = appointments.filter(a => {
+            const appDateStr = a.date.includes('T') ? a.date.split('T')[0] : a.date;
+            const isMyDate = appDateStr.trim() === finalDateToSend.trim();
+            const isMyMaster = (a.staff?._id || a.staff || "").toString() === targetStaffId.toString();
+            return isMyMaster && isMyDate && a._id !== id;
+        });
 
-        // Перевірки конфліктів (залишаються як були)
+        // 4. Перевірка на "стик у стик" (щоб не починалися в одну хвилину)
         const sameStart = masterApps.find(a => a.time === targetTime);
         if (sameStart) {
-            alert("❌ Записи не можуть починатися в один і той самий час!");
+            alert("❌ Тут уже починається інший запис!");
             return;
         }
 
+        // 5. Перевірка на накладки (Стрижка + Фарбування)
         const conflicts = masterApps.filter(other => {
             const [oh, om] = other.time.split(':').map(Number);
             const oStart = oh * 60 + om;
@@ -291,8 +343,10 @@ export default function Calendar() {
         });
 
         if (conflicts.length > 0) {
-            const isDraggingDyeing = /фарб|color|малюв|dye/i.test(draggingApp.serviceName || draggingApp.service?.name || "");
-            const hasDyeingInConflict = conflicts.some(c => /фарб|color|малюв|dye/i.test(c.serviceName || c.service?.name || ""));
+            const isDraggingDyeing = /фарб|color|малюв|dye/i.test(draggingApp.serviceName || "");
+            const hasDyeingInConflict = conflicts.some(c => /фарб|color|малюв|dye/i.test(c.serviceName || ""));
+
+            // Дозволяємо накладку тільки якщо один фарбується, а інший — ні
             const canOverlap = (isDraggingDyeing && !hasDyeingInConflict) || (!isDraggingDyeing && hasDyeingInConflict);
 
             if (!canOverlap || conflicts.length >= 2) {
@@ -301,24 +355,28 @@ export default function Calendar() {
             }
         }
 
-        // Оптимістичне оновлення
+        // 6. Оптимістичне оновлення інтерфейсу
         setAppointments(prev => prev.map(a =>
-            a._id === appId ? { ...a, staff: targetStaffId, staffId: targetStaffId, time: targetTime, date: selectedDate } : a
+            a._id === id ? { ...a, staff: targetStaffId, staffId: targetStaffId, time: targetTime, date: finalDateToSend } : a
         ));
 
+        // 7. Відправка на сервер
         try {
-            await api.patch(`/appointments/${appId}`, {
+            await api.patch(`/appointments/${id}`, {
                 staff: targetStaffId,
                 time: targetTime,
-                date: selectedDate,
-                duration: currentDuration // ТЕПЕР ПЕРЕДАЄМО ПРАВИЛЬНУ ЗМІННУ
+                date: finalDateToSend, // Шлемо чистий рядок "2026-04-27"
+                duration: currentDuration
             });
+            // Оновлюємо дані, щоб підтягнути всі populate з бекенду
             fetchData();
         } catch (err) {
-            alert("Помилка сервера");
+            console.error("Patch error:", err);
+            alert("Помилка при збереженні змін");
             fetchData();
         }
     };
+
 
 
 
@@ -389,11 +447,11 @@ export default function Calendar() {
                     onChange={(e) => setFilterCategory(e.target.value)}
                 >
                     <option value="all">🌈 Всі послуги</option>
-                    <option value="haircut">✂️ Стрижки</option>
-                    <option value="dyeing">🎨 Фарбування</option>
-                    <option value="makeup">💄 Візаж</option>
-                    <option value="manicure">💅 Манікюр</option>
-                    <option value="other">⚙️ Інше</option>
+                    {categories.map(cat => (
+                        <option key={cat._id} value={cat._id}>
+                            {cat.name}
+                        </option>
+                    ))}
                 </select>
 
                 <button className="today-btn" onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}>Сьогодні</button>
@@ -425,43 +483,34 @@ export default function Calendar() {
                             </div>
 
                             <div className="slots" style={{ position: 'relative', minHeight: `${timeLabels.length * CELL_HEIGHT}px` }}>
-                                {/* 1. Сітка (клітинки) */}
+                                {/* 1. Сітка */}
                                 {timeLabels.map(time => (
                                     <div
                                         key={time}
                                         className="cell"
                                         onDragOver={(e) => {
                                             e.preventDefault();
-                                            // Якщо ми тягнемо над існуючим записом, не підсвічуємо клітинку під ним
                                             if (isDraggingOverApp.current) return;
-
                                             e.currentTarget.classList.add('drag-over');
                                             if (dragOverSlot?.time !== time || dragOverSlot?.staffId !== m._id) {
                                                 setDragOverSlot({ staffId: m._id, time: time, onApp: false });
                                             }
                                         }}
                                         onDragLeave={(e) => {
-                                            // Використовуємо target щоб уникнути мерехтіння при переході на плюс-хінт
                                             if (e.currentTarget.contains(e.relatedTarget)) return;
-
                                             e.currentTarget.classList.remove('drag-over');
                                             setDragOverSlot(null);
                                         }}
                                         onDrop={(e) => {
                                             e.preventDefault();
                                             e.currentTarget.classList.remove('drag-over');
-
-                                            // Скидаємо стани перетягування
                                             isDraggingOverApp.current = false;
                                             setDragOverSlot(null);
-
-                                            // Вираховуємо точний час скидання (Drop)
                                             const slotsEl = e.currentTarget.closest('.slots');
                                             const rect = slotsEl.getBoundingClientRect();
                                             const relY = e.clientY - rect.top;
                                             const slotIndex = Math.floor(relY / CELL_HEIGHT);
                                             const dropTime = timeLabels[Math.max(0, Math.min(slotIndex, timeLabels.length - 1))];
-
                                             handleDrop(e, m._id, dropTime);
                                         }}
                                         onClick={() => {
@@ -472,73 +521,44 @@ export default function Calendar() {
                                         <div className="plus-hint">+</div>
                                     </div>
                                 ))}
-                                {/* 2. Лінія поточного часу */}
-                                {nowTop !== null && selectedDate === new Date().toISOString().split('T')[0] && (
-                                    <div className="now-line" style={{ top: `${nowTop}px` }}>
-                                        <div className="now-dot" />
-                                    </div>
-                                )}
 
-                                {/* 3. ЗАПИСИ (з фільтрацією категорій) */}
+                                {/* 2. Лінія поточного часу - ВИПРАВЛЕНО ПОРІВНЯННЯ */}
+                                {nowTop !== null &&
+                                    (typeof selectedDate === 'string' ? selectedDate : selectedDate.toISOString().split('T')[0]) === new Date().toISOString().split('T')[0] && (
+                                        <div className="now-line" style={{ top: `${nowTop}px` }}>
+                                            <div className="now-dot" />
+                                        </div>
+                                    )}
 
-
-                                {/* 3. ЗАПИСИ (з виправленням кольорів) */}
-                                {/* 3. ЗАПИСИ (masterApps) */}
-                                {/* 3. ЗАПИСИ (masterApps) */}
-                                {/* 3. ЗАПИСИ (masterApps) */}
+                                {/* 3. ЗАПИСИ */}
                                 {(() => {
-                                    const masterApps = appointments.filter(a => {
+                                    // Формуємо чисту дату для порівняння
+                                    let targetDateStr = typeof selectedDate === 'string'
+                                        ? selectedDate.split('T')[0]
+                                        : getLocalDateString(selectedDate);
+
+                                    const masterApps = filteredByStatusAndCategory.filter(a => {
+                                        const appDateStr = a.date.includes('T') ? a.date.split('T')[0] : a.date;
                                         const isMyMaster = (a.staff?._id || a.staff || a.staffId || "").toString() === m._id.toString();
-                                        const isMyDate = a.date === selectedDate;
-
-                                        // Визначаємо категорію для фільтрації
-                                        const finalCat = a.service?.category?.slug || a.service?.category || 'other';
-                                        const matchesFilter = filterCategory === 'all' || finalCat === filterCategory;
-
-                                        return isMyMaster && isMyDate && matchesFilter;
+                                        const isMyDate = appDateStr.trim() === targetDateStr.trim();
+                                        return isMyMaster && isMyDate;
                                     });
 
                                     return masterApps.map(app => {
-                                        // ДИНАМІЧНИЙ КОЛІР: Беремо колір з категорії через послугу
-                                        // Якщо populate на бекенді працює, тут буде колір, інакше — золото за дефолтом
-                                        const categoryColor = app.categoryColor || '#D4AF37';
+                                        const styles = getAppStyles(app, m, masterApps, dragOverSlot);
+                                        if (styles.display === 'none') return null;
+
+                                        const isDyeing = /фарб|color|малюв|dye/i.test(app.serviceName || "");
 
                                         return (
                                             <div
                                                 key={app._id}
                                                 className="app-row"
-                                                style={{
-                                                    ...getAppStyles(app, m, masterApps, dragOverSlot),
-                                                    backgroundColor: `${app.categoryColor || '#D4AF37'}25`,
-                                                    borderLeft: `4px solid ${app.categoryColor || '#D4AF37'}`,
-                                                    pointerEvents: dragOverSlot ? 'auto' : 'auto'
-                                                }}
+                                                style={styles}
                                                 draggable="true"
-                                                onDragOver={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    const isDyeingTarget = /фарб|color|малюв|dye/i.test(app.serviceName || '');
-                                                    if (isDyeingTarget) {
-                                                        setDragOverApp({ appId: app._id });
-                                                        // НЕ чіпаємо dragOverSlot — щоб не змінювати ширину блоку
-                                                    }
-                                                }}
-                                                onDragLeave={(e) => {
-                                                    e.stopPropagation();
-                                                    setDragOverApp(null);
-                                                }}
-                                                onDrop={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    const isDyeingTarget = /фарб|color|малюв|dye/i.test(app.serviceName || '');
-                                                    if (isDyeingTarget) {
-                                                        setDragOverApp(null);
-                                                        handleDrop(e, m._id, app.time);
-                                                    }
-                                                }}
                                                 onDragStart={(e) => {
                                                     e.dataTransfer.setData("appId", app._id);
-                                                    setTimeout(() => e.target.style.opacity = "0.5", 0);
+                                                    setTimeout(() => (e.target.style.opacity = "0.5"), 0);
                                                 }}
                                                 onDragEnd={(e) => {
                                                     e.target.style.opacity = "1";
@@ -549,9 +569,12 @@ export default function Calendar() {
                                                     setViewApp({ ...app, masterName: m.name });
                                                 }}
                                             >
-                                                <div className="app-time-tag" style={{ color: app.categoryColor || '#D4AF37' }}>{app.time}</div>
+                                                <div className="app-time-tag" style={{ color: app.categoryColor || '#D4AF37' }}>
+                                                    {app.time}
+                                                </div>
                                                 <div className="app-client-name">{app.clientName}</div>
                                                 <div className="app-service-name">{app.serviceName}</div>
+                                                {isDyeing && <span className="dye-icon material-symbols-rounded">palette</span>}
                                             </div>
                                         );
                                     });
@@ -562,7 +585,6 @@ export default function Calendar() {
                         </div>
                     ))}
                 </div>
-
             </div>
 
             {/* Модалка створення запису */}
