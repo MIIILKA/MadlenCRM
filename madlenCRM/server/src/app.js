@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const sendReminders = require('./utils/pushReminders');
 const categoryRoutes = require('./routes/category.routes');
-
+const settingsRoutes = require('./routes/paintSetting.routes');
 const app = express();
 
 // 1. Мідлвари
@@ -43,6 +43,7 @@ app.use('/api/staff', require('./routes/staff.routes'));
 app.use('/api/appointments', require('./routes/appointments.routes'));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/categories', categoryRoutes);
+app.use('/api/paint-settings', require('./routes/paintSetting.routes'));
 
 
 // 5. 404

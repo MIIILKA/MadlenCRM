@@ -13,33 +13,33 @@ const timeToMinutes = (timeStr) => {
 exports.getBookedSlots = async (req, res) => {
     try {
         const { staffId, date } = req.query;
-
-        // Використовуємо Promise.all для швидкості
         const [appointments, staffMember] = await Promise.all([
             Appointment.find({ staff: staffId, date, status: { $ne: 'cancelled' } }),
             Staff.findById(staffId)
         ]);
 
-        if (!staffMember) {
-            return res.status(404).json({ message: "Майстра не знайдено" });
-        }
-
-        const hours = staffMember.workHours || {};
-        // Визначаємо день тижня (0-6)
-        const dayOfWeek = new Date(date).getDay().toString();
-        const workingDay = hours[dayOfWeek] || { active: false };
+        // Генеруємо всі зайняті слоти з урахуванням тривалості
+        const bookedSlots = [];
+        appointments.forEach(app => {
+            const [h, m] = app.time.split(':').map(Number);
+            const start = h * 60 + m;
+            const duration = Number(app.duration) || 20;
+            // Блокуємо кожні 20 хв в діапазоні запису
+            for (let t = start; t < start + duration; t += 20) {
+                const hh = String(Math.floor(t / 60)).padStart(2, '0');
+                const mm = String(t % 60).padStart(2, '0');
+                bookedSlots.push(`${hh}:${mm}`);
+            }
+        });
 
         res.json({
-            bookedSlots: appointments.map(app => app.time),
-            workHours: hours,
-            workingDay: workingDay
+            bookedSlots,
+            workHours: staffMember?.workHours || {}
         });
     } catch (err) {
-        console.error("Помилка getBookedSlots:", err);
-        res.status(500).json({ message: "Помилка при отриманні слотів" });
+        res.status(500).json({ message: "Помилка" });
     }
 };
-
 // 2. Створити новий запис
 // 2. Створити новий запис (підтримує і клієнтський запис, і ручний з календаря)
 exports.createAppointment = async (req, res) => {
@@ -71,7 +71,8 @@ exports.createAppointment = async (req, res) => {
         const hasOverlap = existingApps.some(app => {
             const appStart = timeToMinutes(app.time);
             const appEnd = appStart + (Number(app.duration) || 20);
-            const isOver = startNew < appEnd && endNew > startStart;
+            const isOver = startNew < appEnd && endNew > appStart;
+
 
             if (isOver) {
                 const name1 = (selectedService.name || "").toLowerCase();
@@ -230,25 +231,32 @@ webpush.setVapidDetails(
 exports.updateAppointment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { staff, time, date } = req.body;
+        const { staff, time, date, status, duration } = req.body;
+
+        // Якщо це просто зміна статусу — оновлюємо одразу без перевірок
+        if (status && !time && !staff) {
+            const updated = await Appointment.findByIdAndUpdate(
+                id,
+                { $set: { status } },
+                { new: true }
+            );
+            return res.json(updated);
+        }
 
         const movingApp = await Appointment.findById(id).populate('service staff');
         if (!movingApp) return res.status(404).json({ message: "Запис не знайдено" });
 
         const sId = movingApp.service?._id?.toString();
-        const movingDuration = Number(movingApp.staff?.specializations?.[sId]) || Number(movingApp.duration) || 20;
+        const movingDuration = Number(movingApp.staff?.specializations?.[sId]) || Number(duration) || Number(movingApp.duration) || 20;
 
         const startNew = timeToMinutes(time);
         const endNew = startNew + movingDuration;
 
-        // Шукаємо перетини
         const dayApps = await Appointment.find({
             staff, date, _id: { $ne: id }, status: { $ne: 'cancelled' }
         }).populate('service');
 
         const hasOverlap = dayApps.some(app => {
-            const appSId = app.service?._id?.toString();
-            // Тут важливо: беремо тривалість кожного існуючого запису
             const appDuration = Number(app.duration) || 20;
             const startExisting = timeToMinutes(app.time);
             const endExisting = startExisting + appDuration;
@@ -260,8 +268,6 @@ exports.updateAppointment = async (req, res) => {
                 const name2 = (app.service?.name || "").toLowerCase();
                 const isDye1 = /фарб|color|dye/i.test(name1);
                 const isDye2 = /фарб|color|dye/i.test(name2);
-
-                // Якщо обидва — фарбування, дозволяємо. В іншому випадку — ЗАБОРОНА.
                 if (isDye1 && isDye2) return false;
                 return true;
             }
@@ -272,15 +278,17 @@ exports.updateAppointment = async (req, res) => {
             return res.status(400).json({ message: "Накладка! Манікюр/візаж/стрижка мають бути окремо." });
         }
 
-        const updatedApp = await Appointment.findByIdAndUpdate(id, { staff, time, date }, { new: true })
-            .populate('staff service client');
+        const updatedApp = await Appointment.findByIdAndUpdate(
+            id,
+            { $set: { ...(staff && { staff }), ...(time && { time }), ...(date && { date }), ...(duration && { duration }) } },
+            { new: true }
+        ).populate('staff service client');
 
         res.status(200).json(updatedApp);
     } catch (error) {
         res.status(500).json({ message: "Помилка сервера", error: error.message });
     }
 };
-
 
 exports.getAllAppointments = async (req, res) => {
     try {

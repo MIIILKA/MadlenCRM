@@ -477,7 +477,7 @@
 
     form {
       display: flex; flex-direction: column; gap: 15px;
-      input, textarea {
+      input, textarea, select {
         background: #000; border: 1px solid #222; padding: 18px;
         color: #fff; border-radius: 18px; font-size: 16px;
         &:focus { border-color: $color-gold; }

@@ -86,3 +86,274 @@
     }
   }
 }
+.modal-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 20px;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  // Стиль хрестика
+  button.close-x, .modal-box__header button:not(.title-with-icon button) {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+
+    &:hover {
+      background: rgba(#ff5e5e, 0.15);
+      border-color: rgba(#ff5e5e, 0.3);
+      color: #ff5e5e;
+      transform: rotate(90deg);
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+.materials-toggle {
+  width: 100%;
+  @include glass;
+  padding: 18px 24px;
+  border-radius: 18px;
+  border: 1px solid rgba($color-gold, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  color: #fff;
+  transition: 0.3s;
+  margin-top: 20px;
+
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    span:first-child { color: $color-gold; }
+    span:last-child { font-weight: 700; font-size: 14px; }
+  }
+
+  &:hover { border-color: rgba($color-gold, 0.4); background: rgba($color-gold, 0.05); }
+
+  &.active {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-color: $color-gold;
+  }
+}
+
+.materials-dropdown-panel {
+  @include glass;
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-radius: 0 0 18px 18px;
+  padding: 24px;
+  border: 1px solid $color-gold;
+  background: rgba(10, 10, 10, 0.8);
+  animation: slideDown 0.3s ease-out;
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .config-item {
+    label { font-size: 10px; color: #777; text-transform: uppercase; margin-bottom: 6px; display: block; font-weight: 800; }
+    .input-group {
+      position: relative;
+      input {
+        width: 100%; background: #000; border: 1px solid #222; padding: 12px; border-radius: 10px;
+        color: #fff; font-weight: 700;
+        &:focus { border-color: $color-gold; outline: none; }
+      }
+      .unit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: $color-gold; font-size: 12px; }
+    }
+  }
+
+  .formula-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba($color-gold, 0.05);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    p { margin: 0; font-size: 12px; color: #aaa; b { color: #fff; } }
+    span { color: $color-gold; font-size: 18px; }
+  }
+
+  .save-materials-btn {
+    width: 100%; padding: 14px; background: $color-gold; color: #000; border: none;
+    border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s;
+    &:hover { filter: brightness(1.1); transform: translateY(-2px); }
+  }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+.success-modal {
+  max-width: 400px !important; // Робимо її компактнішою за звичайні
+  text-align: center;
+  padding: 32px !important;
+  border: 1px solid rgba(76, 175, 125, 0.3) !important; // Зеленувата рамка
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(76, 175, 125, 0.1) !important;
+
+  .modal-box__header {
+    border-bottom: none !important; // Прибираємо лінію в успішній модалці
+    margin-bottom: 10px !important;
+    justify-content: center !important; // Центруємо заголовок
+
+    .title-with-icon {
+      flex-direction: column; // Іконка над текстом
+      gap: 15px;
+
+      span { font-size: 48px !important; } // Велика іконка
+      h3 { font-size: 1.4rem; color: #fff; }
+    }
+
+    .close-x {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+  }
+
+  .modal-box__body {
+    p {
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+  }
+
+  // Стильна кнопка спеціально для цієї модалки
+  .wh-save-btn {
+    background: rgba(76, 175, 125, 0.1) !important;
+    border: 1px solid #4caf7d !important;
+    color: #4caf7d !important;
+
+    &:hover {
+      background: #4caf7d !important;
+      color: #000 !important;
+      box-shadow: 0 0 15px rgba(76, 175, 125, 0.4);
+    }
+  }
+}
+
+// Центрування самої модалки (modal-overlay)
+.modal-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.materials-dropdown-panel {
+  // Загальна секція
+  .admin-config-section {
+    margin-bottom: 30px;
+
+    .config-title {
+      color: #D4AF37;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  }
+
+  // Сетка інпутів
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      label {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 800;
+      }
+
+      // Стилізація самого інпута
+      input {
+        background: #000;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 12px 15px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+
+        &:focus {
+          outline: none;
+          border-color: #D4AF37;
+          box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+        }
+
+        // Прибираємо стрілочки в number-інпутах
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  // Спеціальна група з символом валюти
+  .input-group {
+    position: relative;
+
+    input {
+      width: 100%;
+      padding-right: 35px; // місце для ₴
+    }
+
+    .unit {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #D4AF37;
+      font-weight: 700;
+      pointer-events: none;
+    }
+  }
+}

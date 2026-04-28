@@ -15,12 +15,10 @@ router.get('/my', authMiddleware, appointmentController.getClientAppointments);
 router.get('/master', authMiddleware, appointmentController.getMasterAppointments);
 router.get('/staff/work-hours',  authMiddleware, appointmentController.getWorkHours);
 router.post('/staff/work-hours', authMiddleware, appointmentController.saveWorkHours);
-
-// Роути для адміна/овнера (фінанси та повний календар)
+router.patch('/:id', appointmentController.updateAppointment);// Роути для адміна/овнера (фінанси та повний календар)
 router.get('/finance/stats', authMiddleware, adminMiddleware, appointmentController.getFinanceStats);
 
 // Замість adminMiddleware ставимо calendarAccessMiddleware
 router.get('/all', authMiddleware, calendarAccessMiddleware, appointmentController.getAllAppointments);
-router.patch('/:id', appointmentController.updateAppointment);
 
 module.exports = router;

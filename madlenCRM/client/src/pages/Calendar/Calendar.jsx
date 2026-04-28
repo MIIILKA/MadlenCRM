@@ -10,13 +10,23 @@ export default function Calendar() {
     const [loading, setLoading] = useState(true);
     const [dragOverSlot, setDragOverSlot] = useState(null); // { staffId, time, onApp? }
     const [categories, setCategories] = useState([]);
-
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newApp, setNewApp] = useState({ staff: '', time: '', clientName: '', phone: '+380', service: '', comment: '' });
     const [filterCategory, setFilterCategory] = useState('all');
     // Модалка перегляду запису
     const [viewApp, setViewApp] = useState(null);
-    // Кастомний датпікер
+    const [adminSettings, setAdminSettings] = useState({ dyePriceGram: 15 }); // Ціна за грам за замовчуванням
+    const [dyeingDetails, setDyeingDetails] = useState({
+        formula: '',
+        hairLength: 'medium', // short, medium, long
+        density: 'medium',    // low, medium, high
+        technique: 'one-tone' // one-tone, balayage, airtouch
+    });    // Кастомний датпікер
+
+    const [pricing, setPricing] = useState({ dye: 15, oxid: 5, supplies: 50 });
+
+
+
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [pickerMonth, setPickerMonth] = useState(new Date());
     const datePickerRef = useRef(null);
@@ -60,7 +70,13 @@ export default function Calendar() {
         fetchData();
         api.get('/services').then(res => setServices(res.data));
     }, [selectedDate]);
-
+    useEffect(() => {
+        api.get('/paint-settings')
+            .then(res => {
+                if (res.data.pricing) setPricing(res.data.pricing);
+            })
+            .catch(err => console.error("Не вдалося завантажити ціни для календаря"));
+    }, []);
     // Додай цей стейт до інших
 
     const fetchData = async () => {
@@ -122,6 +138,28 @@ export default function Calendar() {
             // Важливо: перетворюємо в Number, бо з інпутів може прийти рядок
             const durationValue = selectedService ? Number(selectedService.duration) : 20;
 
+
+            const [h, m] = newApp.time.split(':').map(Number);
+            const newStart = h * 60 + m;
+            const newEnd = newStart + durationValue;
+
+            const hasConflict = appointments.some(a => {
+                const isSameDate = (a.date.split('T')[0]) === selectedDate;
+                const isSameMaster = (a.staff?._id || a.staff || "").toString() === newApp.staff.toString();
+                if (!isSameDate || !isSameMaster || a.status === 'cancelled') return false;
+
+                const [ah, am] = a.time.split(':').map(Number);
+                const aStart = ah * 60 + am;
+                const aEnd = aStart + (Number(a.duration) || 20);
+
+                return newStart < aEnd && newEnd > aStart;
+            });
+
+            if (hasConflict) {
+                alert("❌ У цього майстра цей час уже зайнятий!");
+                return;
+            }
+
             const appointmentData = {
                 staff: newApp.staff,
                 service: newApp.service,
@@ -146,7 +184,7 @@ export default function Calendar() {
 
 
 
-    
+
     // Тиждень
     const weekDays = [];
     for (let i = 0; i < 7; i++) {
@@ -623,7 +661,32 @@ export default function Calendar() {
                                 {{ pending: '⏳ Очікує', confirmed: '✅ Підтверджено', cancelled: '❌ Скасовано', completed: '✔ Завершено' }[viewApp.status] || '⏳ Очікує'}
                             </span>
                         </div>
-
+                        {/* Кнопка скасування */}
+                        {viewApp.status !== 'cancelled' && viewApp.status !== 'completed' && (
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm('Скасувати цей запис?')) return;
+                                    try {
+                                        await api.patch(`/appointments/${viewApp._id}`, { status: 'cancelled' });
+                                        setViewApp(null);
+                                        fetchData();
+                                    } catch (err) {
+                                        alert('Помилка при скасуванні');
+                                    }
+                                }}
+                                style={{
+                                    width: '100%', marginTop: '12px', padding: '14px',
+                                    borderRadius: '14px', background: 'transparent',
+                                    border: '1px solid rgba(255,77,77,0.4)', color: '#ff4d4d',
+                                    fontWeight: '800', fontSize: '11px', textTransform: 'uppercase',
+                                    cursor: 'pointer', transition: '0.3s'
+                                }}
+                                onMouseEnter={e => e.target.style.background = 'rgba(255,77,77,0.1)'}
+                                onMouseLeave={e => e.target.style.background = 'transparent'}
+                            >
+                                ✕ Скасувати запис
+                            </button>
+                        )}
                         <div className="view-hero">
                             <div className="view-time-block">
                                 <span className="view-time">{viewApp.time}</span>
@@ -653,7 +716,180 @@ export default function Calendar() {
                                 </div>
                             )}
                         </div>
+
+                        {(() => {
+                            // 1. Отримуємо всі послуги в один плоский масив для пошуку
+                            const allServices = categories?.flatMap(cat => cat?.services || []) || [];
+
+                            // 2. Нормалізуємо назву послуги з запису (видаляємо пробіли, малі літери)
+                            const normalizedSearchName = viewApp?.serviceName?.trim()?.toLowerCase();
+                            const currentService = services.find(s =>
+                                (s?._id && (s._id === viewApp?.serviceId || s._id === viewApp?.service?._id || s._id === viewApp?.service)) ||
+                                (s?.name?.trim()?.toLowerCase() === normalizedSearchName)
+                            );
+                            const washService = services.find(s =>
+                                s?.name?.toLowerCase().includes('миття')
+                            );
+
+                            // 5. ФОРМУЄМО БАЗОВІ ЦІНИ (запис -> база -> 0)
+                            const basePrice = Number(viewApp?.price) || Number(currentService?.price) || 0;
+                            const dynamicWashPrice = Number(washService?.price) || 0;
+
+                            // 6. ВИЗНАЧЕННЯ ТИПУ ТА ЛОГІКА МИТТЯ
+                            const isColoring = /фарб|color|малюв|dye/i.test(viewApp?.serviceName || "");
+                            const isHaircut = /стриж|cut/i.test(viewApp?.serviceName || "");
+
+                            const needsWash = isColoring || dyeingDetails?.extraWash;
+                            const washCost = needsWash ? dynamicWashPrice : 0;
+
+                            // 7. РОЗРАХУНОК МАТЕРІАЛІВ (Тільки для фарбування)
+                            let colorCost = 0; let oxidCost = 0; let suppliesCost = 0;
+                            let finalG = 0; let finalOx = 0;
+
+                            if (isColoring && pricing) {
+                                const baseG = Number(pricing?.baseGrams?.[dyeingDetails.hairLength]) || 0;
+                                const densC = Number(pricing?.densityCoef?.[dyeingDetails.density]) || 1;
+                                const techC = Number(pricing?.techniqueCoef?.[dyeingDetails.technique]) || 1;
+
+                                const autoGrams = Math.round(baseG * densC * techC);
+                                finalG = dyeingDetails.manualGrams !== undefined ? Number(dyeingDetails.manualGrams) : autoGrams;
+                                finalOx = dyeingDetails.manualOxid !== undefined ? Number(dyeingDetails.manualOxid) : (finalG * (dyeingDetails.technique === "one-tone" ? 1 : 2));
+
+                                colorCost = finalG * (Number(pricing.dye) || 0);
+                                oxidCost = finalOx * (Number(pricing.oxid) || 0);
+                                suppliesCost = Number(pricing.supplies) || 0;
+                            }
+
+                            // 8. ПІДСУМКОВА СУМА
+                            const finalTotal = basePrice + washCost + colorCost + oxidCost + suppliesCost;
+
+                            return (
+                                <div className="smart-calc-container" style={{
+                                    marginTop: '20px', padding: '20px', borderRadius: '24px',
+                                    background: 'rgba(212, 175, 55, 0.03)', border: '1px solid rgba(212, 175, 55, 0.15)'
+                                }}>
+
+                                    {/* Попередження, якщо ціну не знайдено навіть після глибокого пошуку */}
+                                    {basePrice === 0 && allServices.length > 0 && (
+                                        <div style={{ color: '#ff4d4d', fontSize: '10px', marginBottom: '12px', textAlign: 'center', fontWeight: 'bold' }}>
+                                            ⚠️ Ціну для "{viewApp?.serviceName}" не знайдено. Перевірте назву в налаштуваннях послуг.
+                                        </div>
+                                    )}
+
+                                    {/* Кнопка миття (для стрижок) */}
+                                    {isHaircut && !isColoring && (
+                                        <button
+                                            onClick={() => setDyeingDetails({...dyeingDetails, extraWash: !dyeingDetails.extraWash})}
+                                            style={{
+                                                width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '14px',
+                                                background: needsWash ? '#D4AF37' : 'rgba(255,255,255,0.05)',
+                                                color: needsWash ? '#000' : '#D4AF37', border: '1px solid #D4AF37',
+                                                fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', transition: '0.3s'
+                                            }}
+                                        >
+                                            {needsWash ? '✓ Миття голови додано' : '+ Додати миття голови'}
+                                        </button>
+                                    )}
+
+                                    {/* Блок фарбування */}
+                                    {isColoring && (
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '15px' }}>
+                                                <select
+                                                    value={dyeingDetails.hairLength}
+                                                    onChange={e => setDyeingDetails({...dyeingDetails, hairLength: e.target.value, manualGrams: undefined})}
+                                                    style={{ background: '#000', color: '#fff', border: '1px solid #222', padding: '12px 8px', borderRadius: '12px', fontSize: '12px' }}
+                                                >
+                                                    <option value="short">Коротке</option>
+                                                    <option value="medium">Середнє</option>
+                                                    <option value="long">Довге</option>
+                                                </select>
+                                                <select
+                                                    value={dyeingDetails.density}
+                                                    onChange={e => setDyeingDetails({...dyeingDetails, density: e.target.value, manualGrams: undefined})}
+                                                    style={{ background: '#000', color: '#fff', border: '1px solid #222', padding: '12px 8px', borderRadius: '12px', fontSize: '12px' }}
+                                                >
+                                                    <option value="low">Рідке</option>
+                                                    <option value="medium">Норма</option>
+                                                    <option value="high">Густе</option>
+                                                </select>
+                                                <select
+                                                    value={dyeingDetails.technique}
+                                                    onChange={e => setDyeingDetails({...dyeingDetails, technique: e.target.value, manualGrams: undefined})}
+                                                    style={{ background: '#000', color: '#fff', border: '1px solid #222', padding: '12px 8px', borderRadius: '12px', fontSize: '12px' }}
+                                                >
+                                                    <option value="one-tone">Тон</option>
+                                                    <option value="balayage">Балаяж</option>
+                                                    <option value="airtouch">Airtouch</option>
+                                                </select>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                    <label style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: '800' }}>Фарба (г)</label>
+                                                    <input
+                                                        type="number" value={finalG}
+                                                        onChange={e => setDyeingDetails({...dyeingDetails, manualGrams: e.target.value})}
+                                                        style={{ background: '#000', border: '1px solid #222', padding: '12px', borderRadius: '12px', color: '#D4AF37', fontWeight: '700', width: '100%', boxSizing: 'border-box' }}
+                                                    />
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                    <label style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: '800' }}>Окисник (г)</label>
+                                                    <input
+                                                        type="number" value={finalOx}
+                                                        onChange={e => setDyeingDetails({...dyeingDetails, manualOxid: e.target.value})}
+                                                        style={{ background: '#000', border: '1px solid #222', padding: '12px', borderRadius: '12px', color: '#D4AF37', fontWeight: '700', width: '100%', boxSizing: 'border-box' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* ЧЕК */}
+                                    <div style={{ background: '#D4AF37', borderRadius: '18px', color: '#000', padding: '20px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', fontWeight: '700' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>{viewApp?.serviceName || 'Послуга'}:</span>
+                                                <span>{basePrice} ₴</span>
+                                            </div>
+                                            {needsWash && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span>Миття голови:</span>
+                                                    <span>+ {washCost} ₴</span>
+                                                </div>
+                                            )}
+                                            {isColoring && (
+                                                <>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span>Матеріали:</span>
+                                                        <span>+ {Math.round(colorCost + oxidCost)} ₴</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span>Технічний набір:</span>
+                                                        <span>+ {suppliesCost} ₴</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                            <div style={{ borderTop: '1px dashed rgba(0,0,0,0.15)', margin: '8px 0' }}></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '12px', fontWeight: '900', textTransform: 'uppercase' }}>Разом:</span>
+                                                <span style={{ fontSize: '32px', fontWeight: '1000', letterSpacing: '-1.5px' }}>
+                            {Math.round(finalTotal)} <small style={{fontSize: '16px'}}>₴</small>
+                        </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+
+
+
+
+
                     </div>
+
                 </div>
             )}
         </div>

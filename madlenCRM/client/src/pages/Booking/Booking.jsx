@@ -113,12 +113,22 @@ export default function Booking() {
 
     const availableSlots = (() => {
         if (!selectedDate || !workHours || !selectedService || !selectedStaff) return [];
+
         const dayKey = String(selectedDate.getDay());
         const h = workHours[dayKey];
         if (!h || h.active === false) return [];
+
         const actualDuration = selectedStaff.specializations?.[selectedService._id] || selectedService.duration;
-        return generateSlots(h.start, h.end, actualDuration);
+
+        // Генеруємо всі можливі слоти
+        const allSlots = generateSlots(h.start, h.end, actualDuration);
+
+        // Фільтруємо ті, що вже зайняті ТІЛЬКИ у вибраного майстра
+        //bookedSlots вже приходить з сервера відфільтрованим по staffId (ти це робиш в useEffect)
+        return allSlots;
+
     })();
+
 
     const daysInMonth = getDaysInMonth(calYear, calMonth);
     const firstDay    = getFirstDayOfMonth(calYear, calMonth);
@@ -267,7 +277,14 @@ export default function Booking() {
                                     {availableSlots.map(t => {
                                         const booked = bookedSlots.includes(t);
                                         return (
-                                            <button key={t} className={`time-slot ${booked ? 'booked' : ''} ${selectedTime === t ? 'selected' : ''}`} disabled={booked} onClick={() => setSelectedTime(t)}>{t}</button>
+                                            <button
+                                                key={t}
+                                                className={`time-slot ${booked ? 'booked' : ''} ${selectedTime === t ? 'selected' : ''}`}
+                                                disabled={booked}
+                                                onClick={() => setSelectedTime(t)}
+                                            >
+                                                {t}
+                                            </button>
                                         );
                                     })}
                                 </div>
