@@ -13,36 +13,44 @@ webpush.setVapidDetails(
 const sendReminders = async () => {
     try {
         const now = new Date();
-        const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        // Враховуємо часовий пояс Львова
+        const kyivNow = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Kyiv"}));
 
-        // Шукаємо записи
+        // Цільовий час: зараз + 10 хвилин
+        const targetTime = new Date(kyivNow.getTime() + 10 * 60 * 1000);
+
+        const dateStr = kyivNow.toISOString().split('T')[0];
+        const h = String(targetTime.getHours()).padStart(2, '0');
+        const m = String(targetTime.getMinutes()).padStart(2, '0');
+        const timeStr = `${h}:${m}`;
+
+        console.log(`🔍 Шукаємо записи на сьогодні (${dateStr}) о ${timeStr}`);
+
         const appointments = await Appointment.find({
-            date: { $gte: now, $lte: twoHoursLater },
-            reminderSent: { $ne: true },
-            status: { $ne: 'cancelled' }
-        }).populate('userId');
+            date: dateStr,
+            time: timeStr,
+            reminderSent: { $ne: true }, // Щоб не слати повторно
+            status: 'confirmed'
+        }).populate('client'); // Важливо: саме 'client'
 
-        // ВЕСЬ ЦЕЙ БЛОК МАЄ БУТИ ТУТ
         for (const app of appointments) {
-            const user = app.userId;
-
-            if (user && user.pushSubscription) {
+            if (app.client?.pushSubscription) {
                 const payload = JSON.stringify({
                     title: 'Madlen CRM ✂️',
-                    body: `Нагадуємо, у вас запис о ${app.time}. Чекаємо на вас!`
+                    body: `Нагадуємо, у вас запис за 10 хвилин (${app.time}). Чекаємо на вас!`
                 });
 
-                await webpush.sendNotification(user.pushSubscription, payload);
+                await webpush.sendNotification(app.client.pushSubscription, payload);
 
                 app.reminderSent = true;
                 await app.save();
-
-                console.log(`✅ Нагадування відправлено для: ${user.name}`);
+                console.log(`✅ Пуш надіслано для: ${app.clientName}`);
             }
         }
     } catch (error) {
-        console.error('❌ Помилка при розсилці:', error);
+        console.error('❌ Помилка розсилки:', error);
     }
 };
+
 
 module.exports = sendReminders;

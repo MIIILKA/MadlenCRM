@@ -28,7 +28,7 @@
 
   &__controls {
     h3 { font-size: 1rem; color: $color-gold; margin-bottom: 15px; font-weight: 600; }
-    .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .controls-grid { margin-top: 20px;  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     .control-btn {
       @include glass;
       padding: 20px; border-radius: 18px; display: flex; align-items: center; gap: 12px; cursor: pointer; color: #fff; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;
@@ -443,4 +443,17 @@
       pointer-events: none;
     }
   }
+}
+
+.cancelled-btn {
+  border: 1px solid rgba(255, 77, 77, 0.2) !important;
+  &:hover {
+    background: rgba(255, 77, 77, 0.05) !important;
+    border-color: #ff4d4d !important;
+  }
+}
+
+.cancelled-table {
+  th { text-transform: uppercase; letter-spacing: 1px; }
+  tr:hover { background: rgba(255, 255, 255, 0.02); }
 }

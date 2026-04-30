@@ -7,8 +7,11 @@ export const AdminDashboard = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showMaterials, setShowMaterials] = useState(false);
+    const [cancelledApps, setCancelledApps] = useState([]); // Список скасованих
+    const [showCancelledModal, setShowCancelledModal] = useState(false); // Показ модалки
+    const [staffList, setStaffList] = useState([]); // Для масиву майстрів
 
-    // ПОВНИЙ ОБ'ЄКТ PRICING З МАСИВОМ PAINTS
+
     const [pricing, setPricing] = useState({
         dye: 15,
         oxid: 5,
@@ -18,7 +21,8 @@ export const AdminDashboard = () => {
         densityCoef: { low: 0.8, medium: 1, high: 1.3 },
         techniqueCoef: { "one-tone": 1, "balayage": 1.5, "airtouch": 2 }
     });
-
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStaff, setFilterStaff] = useState('all');
     const [showManager, setShowManager] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [catForm, setCatForm] = useState({ name: '', color: '#D4AF37', id: null });
@@ -32,19 +36,42 @@ export const AdminDashboard = () => {
         };
         loadData();
     }, []);
+    const filteredCancelled = cancelledApps.filter(app => {
+        const matchesSearch = (app.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (app.phone || '').includes(searchTerm);
 
+        // Більш надійна перевірка ID майстра
+        const appStaffId = app.staff?._id || app.staff;
+        const matchesStaff = filterStaff === 'all' || appStaffId === filterStaff;
+
+        return matchesSearch && matchesStaff;
+    });
+
+    const fetchCancelledAppointments = async () => {
+        try {
+            const res = await api.get('/appointments?status=cancelled');
+            setCancelledApps(res.data);
+            setShowCancelledModal(true);
+        } catch (err) {
+            console.error("Помилка завантаження скасованих записів:", err);
+            alert("Не вдалося завантажити список");
+        }
+    };
     const fetchAdminData = async () => {
         try {
             const [statRes, staffRes, catRes] = await Promise.all([
                 api.get('/appointments/finance/stats').catch(() => ({ data: {} })),
-                api.get('/staff').catch(() => ({ data: [] })),
+                api.get('/staff').catch(() => ({ data: [] })), // Отримуємо масив
                 api.get('/categories').catch(() => ({ data: [] }))
             ]);
+
             setStats({
                 totalRevenue: statRes.data.totalEarnings || 0,
                 appointmentsCount: statRes.data.completedCount || 0,
                 activeStaff: staffRes.data.length
             });
+
+            setStaffList(staffRes.data); // Зберігаємо масив сюди
             setCategories(catRes.data);
         } catch (err) { console.error(err); }
     };
@@ -305,6 +332,10 @@ export const AdminDashboard = () => {
                         <span className="material-symbols-rounded">category</span>
                         <span>Колекції послуг</span>
                     </button>
+                    <button className="control-btn cancelled-btn" onClick={fetchCancelledAppointments}>
+                        <span className="material-symbols-rounded" style={{color: '#ff4d4d'}}>event_busy</span>
+                        <span>Скасовані записи</span>
+                    </button>
                 </div>
             </div>
 
@@ -386,6 +417,94 @@ export const AdminDashboard = () => {
                     </div>
                 </div>
             )}
+            {/* МОДАЛКА СКАСОВАНИХ ЗАПИСІВ */}
+            {showCancelledModal && (
+                <div className="modal-overlay" onClick={() => setShowCancelledModal(false)}>
+                    <div className="modal-box cancelled-modal" onClick={e => e.stopPropagation()} style={{maxWidth: '900px', width: '95%'}}>
+                        <div className="modal-box__header">
+                            <div className="title-with-icon">
+                                <span className="material-symbols-rounded" style={{color: '#ff4d4d'}}>history_toggle_off</span>
+                                <h3>Архів скасувань</h3>
+                            </div>
+                            <button className="close-x" onClick={() => setShowCancelledModal(false)}>✕</button>
+                        </div>
+
+                        <div className="manager-content">
+                            {/* ПАНЕЛЬ ФІЛЬТРІВ */}
+                            <div className="filters-bar" style={{display: 'flex', gap: '15px', marginBottom: '20px', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px'}}>
+                                <div className="filter-group">
+                                    <select
+                                        value={filterStaff}
+                                        onChange={(e) => setFilterStaff(e.target.value)}
+                                        style={{padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '8px', color: '#fff', cursor: 'pointer'}}
+                                    >
+                                        <option value="all">Всі майстри</option>
+                                        {/* ВИПРАВЛЕНО: staffList замість staff */}
+                                        {staffList.map(m => (
+                                            <option key={m._id} value={m._id}>{m.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="filter-group" style={{flex: 1}}>
+                                    <input
+                                        type="text"
+                                        placeholder="Пошук за ім'ям або телефоном..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={{width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '8px', color: '#fff'}}
+                                    />
+                                </div>
+
+                            </div>
+
+                            <div className="cancelled-list-scroll" style={{maxHeight: '55vh', overflowY: 'auto'}}>
+                                {filteredCancelled.length > 0 ? (
+                                    <table className="cancelled-table" style={{width: '100%', borderCollapse: 'collapse'}}>
+                                        <thead style={{position: 'sticky', top: 0, background: '#1a1a1a', zIndex: 1}}>
+                                        <tr style={{textAlign: 'left', borderBottom: '1px solid #333', color: '#777', fontSize: '11px', textTransform: 'uppercase'}}>
+                                            <th style={{padding: '12px'}}>Дата/Час</th>
+                                            <th style={{padding: '12px'}}>Клієнт</th>
+                                            <th style={{padding: '12px'}}>Майстер</th>
+                                            <th style={{padding: '12px'}}>Послуга</th>
+                                            <th style={{padding: '12px'}}>Причина</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {filteredCancelled.map(app => (
+                                            <tr key={app._id} style={{borderBottom: '1px solid #222', fontSize: '13px'}}>
+                                                <td style={{padding: '12px'}}>
+                                                    <div style={{fontWeight: '700'}}>{new Date(app.date).toLocaleDateString()}</div>
+                                                    <div style={{color: '#D4AF37'}}>{app.time}</div>
+                                                </td>
+                                                <td style={{padding: '12px'}}>
+                                                    <div style={{fontWeight: '700'}}>{app.clientName}</div>
+                                                    <div style={{fontSize: '11px', color: '#777'}}>{app.phone}</div>
+                                                </td>
+                                                <td style={{padding: '12px'}}>
+                                                    <span style={{fontSize: '12px', color: '#bbb'}}>{app.staff?.name || '—'}</span>
+                                                </td>
+                                                <td style={{padding: '12px'}}>{app.serviceName || app.service?.name}</td>
+                                                <td style={{padding: '12px'}}>
+                                                    <div style={{padding: '6px 10px', background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', borderRadius: '6px', fontSize: '11px'}}>
+                                                        {app.comment?.replace('СКАСОВАНО КЛІЄНТОМ. Причина: ', '') || '—'}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div style={{textAlign: 'center', padding: '40px', color: '#555'}}>
+                                        {cancelledApps.length === 0 ? "Скасувань ще немає" : "Нічого не знайдено за фільтрами"}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
         </div>
     );
 };

@@ -123,7 +123,21 @@ exports.createAppointment = async (req, res) => {
 // 7. Отримати всі записи для календаря (Виправлено: додано clientWishes у мапінг)
 exports.getAllAppointments = async (req, res) => {
     try {
-        const appointments = await Appointment.find()
+        const { status, staffId } = req.query; // Отримуємо фільтри з URL
+        let query = {};
+
+        // Якщо вказано статус (наприклад, status=cancelled)
+        if (status) {
+            query.status = status;
+        }
+
+        // Якщо вказано ID майстра
+        if (staffId) {
+            query.staff = staffId;
+        }
+
+        const appointments = await Appointment.find(query)
+            .sort({ date: -1, time: -1 }) // Найновіші скасування будуть зверху
             .populate('staff')
             .populate({
                 path: 'service',
@@ -153,9 +167,9 @@ exports.getAllAppointments = async (req, res) => {
                 status: app.status,
                 duration: finalDuration,
                 clientName: app.clientName || app.client?.name || 'Блок/Пауза',
-                clientWishes: app.clientWishes || "", // Тепер прокидаємо на фронтенд
+                clientWishes: app.clientWishes || "",
                 phone: app.phone || app.client?.phone || '',
-                comment: app.comment || '',
+                comment: app.comment || '', // Тут зберігається причина скасування
                 serviceName: hasService ? app.service.name : 'ТЕХНІЧНА ПЕРЕРВА',
                 categoryName: hasService ? app.service.category?.name : 'Перерва',
                 serviceId: sId,

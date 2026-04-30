@@ -87,11 +87,7 @@
             setBookedSlots([]);
         }, [selectedStaff]);
 
-        const formatDate = (d) => {
-            const dd = String(d.getDate()).padStart(2,'0');
-            const mm = String(d.getMonth()+1).padStart(2,'0');
-            return `${d.getFullYear()}-${mm}-${dd}`;
-        };
+
 
         const formatDateUA = (d) => {
             if (!d) return '';
@@ -112,6 +108,21 @@
             const max = Math.max(...times);
             return min === max ? `${min} хв` : `${min}-${max} хв`;
         };
+        const formatDate = (d) => {
+            const dd = String(d.getDate()).padStart(2,'0');
+            const mm = String(d.getMonth()+1).padStart(2,'0');
+            return `${d.getFullYear()}-${mm}-${dd}`;
+        };
+
+        const isSameDay = (a, b) => a && b &&
+            a.getDate() === b.getDate() &&
+            a.getMonth() === b.getMonth() &&
+            a.getFullYear() === b.getFullYear();
+
+        const isPast = (d) => {
+            const t = new Date(); t.setHours(0,0,0,0);
+            return d < t;
+        };
 
         const availableSlots = (() => {
             if (!selectedDate || !workHours || !selectedService || !selectedStaff) return [];
@@ -122,14 +133,30 @@
 
             const actualDuration = selectedStaff.specializations?.[selectedService._id] || selectedService.duration;
 
-            // 1. Генеруємо всі можливі слоти для цього майстра
+            // 1. Генеруємо всі можливі слоти
             const allSlots = generateSlots(h.start, h.end, actualDuration);
 
-            // 2. ФІЛЬТРУЄМО: залишаємо тільки ті слоти, яких НЕМАЄ в bookedSlots
-            return allSlots.filter(slot => !bookedSlots.includes(t => t === slot));
-            // Або просто повертаємо всі слоти, якщо фільтрація відбувається через атрибут disabled у кнопках (як у тебе в JSX).
-            // АЛЕ для чистоти інтерфейсу краще відфільтрувати тут:
-            return allSlots.filter(slot => !bookedSlots.includes(slot));
+            // 2. Логіка перевірки поточного часу (якщо обрано "сьогодні")
+            const now = new Date();
+            const isToday = isSameDay(selectedDate, now);
+
+            return allSlots.filter(slot => {
+                // Перевірка 1: Чи не зайнятий слот іншим клієнтом
+                const isBooked = bookedSlots.includes(slot);
+                if (isBooked) return false;
+
+                // Перевірка 2: Чи не в минулому цей час (тільки для сьогоднішньої дати)
+                if (isToday) {
+                    const [hSlot, mSlot] = slot.split(':').map(Number);
+                    const slotTimeValue = hSlot * 60 + mSlot;
+                    const currentTimeValue = now.getHours() * 60 + now.getMinutes();
+
+                    // Додаємо +5-10 хвилин запасу, щоб клієнт не записався на "зараз"
+                    return slotTimeValue > (currentTimeValue + 5);
+                }
+
+                return true;
+            });
         })();
 
 
@@ -140,11 +167,6 @@
             Array.from({ length: daysInMonth }, (_, i) => new Date(calYear, calMonth, i + 1))
         );
 
-        const isPast = (d) => {
-            const t = new Date(); t.setHours(0,0,0,0);
-            return d < t;
-        };
-        const isSameDay = (a, b) => a && b && a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
 
         const prevMonth = () => {
             if (calMonth === 0) { setCalMonth(11); setCalYear(y => y-1); }
