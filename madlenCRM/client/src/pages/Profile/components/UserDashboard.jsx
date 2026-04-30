@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import api from '../../../api/';
+import { AIBeautyConsultant } from './AIBeautyConsultant'; // Імпортуємо новий компонент
 import './UserDashboard.scss';
 
 export const UserDashboard = ({ appointments, refreshData }) => {
-    const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' або 'archive'
+    // Додаємо 'ai' до можливих станів табів
+    const [activeTab, setActiveTab] = useState('upcoming');
     const [selectedApp, setSelectedApp] = useState(null);
     const [cancelMode, setCancelArea] = useState({ id: null, reason: '' });
 
-    // Перевірка, чи візит уже пройшов
     const isPastAppointment = (dateStr) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return new Date(dateStr) < today;
     };
 
-    // Обробка оплати через LiqPay
     const handlePayment = async (app) => {
-        // Пріоритет на фінальну ціну від майстра, якщо вона є
         const finalAmount = app.dyeingDetails?.finalPrice || app.service?.price || 0;
         try {
             const res = await api.post('/payments/generate', {
@@ -49,14 +48,13 @@ export const UserDashboard = ({ appointments, refreshData }) => {
         }
     };
 
-    // Запити на скасування візиту
     const handleCancelRequest = async () => {
         if (!cancelMode.reason.trim()) return alert("Вкажіть причину скасування");
         try {
             await api.patch(`/appointments/${cancelMode.id}`, {
                 status: 'cancelled',
                 comment: `СКАСОВАНО КЛІЄНТОМ. Причина: ${cancelMode.reason}`,
-                clientWishes: cancelMode.reason // Зберігаємо причину в історію побажань
+                clientWishes: cancelMode.reason
             });
             alert("Запис скасовано.");
             setCancelArea({ id: null, reason: '' });
@@ -66,14 +64,12 @@ export const UserDashboard = ({ appointments, refreshData }) => {
         }
     };
 
-    // Фільтрація записів
     const upcomingApps = appointments?.filter(app => !isPastAppointment(app.date) && app.status !== 'cancelled') || [];
     const archivedApps = appointments?.filter(app => isPastAppointment(app.date) || app.status === 'cancelled') || [];
-    const currentApps = activeTab === 'upcoming' ? upcomingApps : archivedApps;
 
     return (
         <div className="user-dashboard-container">
-            {/* ТАБИ КЕРУВАННЯ */}
+            {/* ТАБИ КЕРУВАННЯ З НОВОЮ КНОПКОЮ ШІ */}
             <div className="dashboard-tabs">
                 <button
                     className={activeTab === 'upcoming' ? 'active' : ''}
@@ -87,67 +83,81 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                 >
                     Архів <span>{archivedApps.length}</span>
                 </button>
+                {/* Кнопка ШІ-Стиліста */}
+                <button
+                    className={`ai-tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('ai')}
+                >
+                    ✨ ШІ Стиліст
+                </button>
             </div>
 
-            {/* СІТКА ВІЗИТІВ */}
-            <div className="appointments-grid">
-                {currentApps.length > 0 ? currentApps.map(app => {
-                    const past = isPastAppointment(app.date);
-                    const isColoring = /фарб|color|dye/i.test(app.service?.name || app.serviceName || "");
-                    const isCancelled = app.status === 'cancelled';
-                    const displayPrice = app.dyeingDetails?.finalPrice || app.service?.price || 0;
+            {/* КОНТЕНТ ЗАЛЕЖНО ВІД ТАБУ */}
+            {activeTab === 'ai' ? (
+                <div className="ai-section-wrapper">
+                    <AIBeautyConsultant />
+                </div>
+            ) : (
+                <div className="appointments-grid">
+                    {(activeTab === 'upcoming' ? upcomingApps : archivedApps).length > 0 ? (
+                        (activeTab === 'upcoming' ? upcomingApps : archivedApps).map(app => {
+                            const past = isPastAppointment(app.date);
+                            const isColoring = /фарб|color|dye/i.test(app.service?.name || app.serviceName || "");
+                            const isCancelled = app.status === 'cancelled';
+                            const displayPrice = app.dyeingDetails?.finalPrice || app.service?.price || 0;
 
-                    return (
-                        <div key={app._id} className={`visit-card ${isCancelled ? 'cancelled' : ''}`}>
-                            <div className="card-top">
-                                <div className="date-info">
-                                    <span className="time">{app.time}</span>
-                                    <span className="date">{new Date(app.date).toLocaleDateString('uk-UA')}</span>
+                            return (
+                                <div key={app._id} className={`visit-card ${isCancelled ? 'cancelled' : ''}`}>
+                                    <div className="card-top">
+                                        <div className="date-info">
+                                            <span className="time">{app.time}</span>
+                                            <span className="date">{new Date(app.date).toLocaleDateString('uk-UA')}</span>
+                                        </div>
+                                        <span className={`status-tag ${app.status}`}>
+                                            {isCancelled ? 'Скасовано' : app.status}
+                                        </span>
+                                    </div>
+
+                                    <div className="card-body" onClick={() => isColoring && setSelectedApp(app)}>
+                                        <h4>{app.service?.name || app.serviceName || 'Послуга'}</h4>
+                                        <div className="price-label">{displayPrice} ₴</div>
+                                        {isColoring && !isCancelled && (
+                                            <div className="detail-badge">Деталі фарбування 👁</div>
+                                        )}
+                                    </div>
+
+                                    {!isCancelled && !past && (
+                                        <button className="pay-btn-luxury" onClick={() => handlePayment(app)}>
+                                            ОПЛАТИТИ КАРТОЮ
+                                        </button>
+                                    )}
+
+                                    <div className="card-footer">
+                                        <div className="master">
+                                            <span className="label">Майстер:</span>
+                                            <span className="name">{app.staff?.name || app.masterName || 'Майстер'}</span>
+                                        </div>
+                                        {!past && !isCancelled && (
+                                            <button
+                                                className="btn-cancel"
+                                                onClick={() => setCancelArea({ id: app._id, reason: '' })}
+                                            >
+                                                Скасувати
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                                <span className={`status-tag ${app.status}`}>
-                                    {isCancelled ? 'Скасовано' : app.status}
-                                </span>
-                            </div>
-
-                            <div className="card-body" onClick={() => isColoring && setSelectedApp(app)}>
-                                <h4>{app.service?.name || app.serviceName || 'Послуга'}</h4>
-                                <div className="price-label">{displayPrice} ₴</div>
-                                {isColoring && !isCancelled && (
-                                    <div className="detail-badge">Деталі фарбування 👁</div>
-                                )}
-                            </div>
-
-                            {/* КНОПКА ОПЛАТИ (тільки для активних записів) */}
-                            {!isCancelled && !past && (
-                                <button className="pay-btn-luxury" onClick={() => handlePayment(app)}>
-                                    ОПЛАТИТИ КАРТОЮ
-                                </button>
-                            )}
-
-                            <div className="card-footer">
-                                <div className="master">
-                                    <span className="label">Майстер:</span>
-                                    <span className="name">{app.staff?.name || app.masterName || 'Майстер'}</span>
-                                </div>
-                                {!past && !isCancelled && (
-                                    <button
-                                        className="btn-cancel"
-                                        onClick={() => setCancelArea({ id: app._id, reason: '' })}
-                                    >
-                                        Скасувати
-                                    </button>
-                                )}
-                            </div>
+                            );
+                        })
+                    ) : (
+                        <div className="empty-state">
+                            <p>{activeTab === 'upcoming' ? 'У вас немає активних записів' : 'Архів порожній'}</p>
                         </div>
-                    );
-                }) : (
-                    <div className="empty-state">
-                        <p>{activeTab === 'upcoming' ? 'У вас немає активних записів' : 'Архів порожній'}</p>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
-            {/* МОДАЛКА ДЕТАЛЕЙ (ФАРБУВАННЯ) */}
+            {/* МОДАЛКИ (залишаються без змін) */}
             {selectedApp && (
                 <div className="user-modal-overlay" onClick={() => setSelectedApp(null)}>
                     <div className="luxury-modal" onClick={e => e.stopPropagation()}>
@@ -191,7 +201,6 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                 </div>
             )}
 
-            {/* МОДАЛКА СКАСУВАННЯ */}
             {cancelMode.id && (
                 <div className="user-modal-overlay" onClick={() => setCancelArea({ id: null, reason: '' })}>
                     <div className="luxury-modal cancel-theme" onClick={e => e.stopPropagation()}>

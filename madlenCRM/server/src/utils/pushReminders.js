@@ -30,7 +30,8 @@ const sendReminders = async () => {
             date: dateStr,
             time: timeStr,
             reminderSent: { $ne: true }, // Щоб не слати повторно
-            status: 'confirmed'
+            status: { $in: ['confirmed', 'pending'] } // Тепер шукає і підтверджені, і нові
+
         }).populate('client'); // Важливо: саме 'client'
 
         for (const app of appointments) {

@@ -8,7 +8,7 @@ const categoryRoutes = require('./routes/category.routes');
 const settingsRoutes = require('./routes/paintSetting.routes');
 const paymentRoutes = require('./routes/payment.routes.js');
 const app = express();
-
+app.use('/api/ai', require('./routes/ai.routes'));
 // 1. Мідлвари
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -46,7 +46,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/categories', categoryRoutes);
 app.use('/api/paint-settings', require('./routes/paintSetting.routes'));
 app.use('/api/payments', paymentRoutes);
-
+app.use('/api/ai', require('./routes/ai.routes'));
 // 5. 404
 app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
