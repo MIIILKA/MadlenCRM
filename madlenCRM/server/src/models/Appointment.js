@@ -13,7 +13,10 @@ const appointmentSchema = new mongoose.Schema({
     duration: { type: Number, default: 20 },
     category: { type: String, default: 'other' },
     reminderSent: { type: Boolean, default: false },
-
+    tips: {
+        type: Number,
+        default: 0
+    },
     dyeingDetails: {
         formula: { type: String, default: '' }, // Текстовий опис для історії
         components: [{

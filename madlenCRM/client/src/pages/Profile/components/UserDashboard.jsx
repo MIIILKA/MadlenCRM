@@ -1,27 +1,47 @@
 import React, { useState } from 'react';
 import api from '../../../api/';
-import { AIBeautyConsultant } from './AIBeautyConsultant'; // Імпортуємо новий компонент
+import { AIBeautyConsultant } from './AIBeautyConsultant';
 import './UserDashboard.scss';
 
 export const UserDashboard = ({ appointments, refreshData }) => {
-    // Додаємо 'ai' до можливих станів табів
+    // 1. ОГОЛОШУЄМО ФУНКЦІЮ ПЕРЕВІРКИ ЧАСУ ПЕРШОЮ
+    const isPastAppointment = (dateStr, timeStr) => {
+        const now = new Date();
+        const appointmentDate = new Date(dateStr);
+
+        if (timeStr) {
+            const [hours, minutes] = timeStr.split(':');
+            appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        } else {
+            // Якщо часу немає, вважаємо запис минулим тільки після завершення дня
+            appointmentDate.setHours(23, 59, 59, 999);
+        }
+
+        return appointmentDate < now;
+    };
+
+    // 2. СТЕЙТИ
     const [activeTab, setActiveTab] = useState('upcoming');
     const [selectedApp, setSelectedApp] = useState(null);
     const [cancelMode, setCancelArea] = useState({ id: null, reason: '' });
+    const [tipMode, setTipMode] = useState(null);
+    const [tipAmount, setTipAmount] = useState(0);
 
-    const isPastAppointment = (dateStr) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return new Date(dateStr) < today;
-    };
+    // 3. ФІЛЬТРАЦІЯ (тепер ініціалізована правильно)
+    const upcomingApps = appointments?.filter(app => !isPastAppointment(app.date, app.time) && app.status !== 'cancelled') || [];
+    const archivedApps = appointments?.filter(app => isPastAppointment(app.date, app.time) || app.status === 'cancelled') || [];
 
+    // Функція оплати
     const handlePayment = async (app) => {
-        const finalAmount = app.dyeingDetails?.finalPrice || app.service?.price || 0;
+        const baseAmount = app.dyeingDetails?.finalPrice || app.service?.price || 0;
+        const totalAmount = Number(baseAmount) + Number(tipAmount);
+
         try {
             const res = await api.post('/payments/generate', {
-                amount: finalAmount,
+                amount: totalAmount,
                 orderId: app._id,
-                description: `Оплата за послугу: ${app.serviceName || app.service?.name}`
+                description: `Оплата за послугу: ${app.serviceName || app.service?.name}${Number(tipAmount) > 0 ? ' (+ чайові)' : ''}`,
+                tips: Number(tipAmount)
             });
 
             const form = document.createElement('form');
@@ -64,12 +84,8 @@ export const UserDashboard = ({ appointments, refreshData }) => {
         }
     };
 
-    const upcomingApps = appointments?.filter(app => !isPastAppointment(app.date) && app.status !== 'cancelled') || [];
-    const archivedApps = appointments?.filter(app => isPastAppointment(app.date) || app.status === 'cancelled') || [];
-
     return (
         <div className="user-dashboard-container">
-            {/* ТАБИ КЕРУВАННЯ З НОВОЮ КНОПКОЮ ШІ */}
             <div className="dashboard-tabs">
                 <button
                     className={activeTab === 'upcoming' ? 'active' : ''}
@@ -83,7 +99,6 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                 >
                     Архів <span>{archivedApps.length}</span>
                 </button>
-                {/* Кнопка ШІ-Стиліста */}
                 <button
                     className={`ai-tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
                     onClick={() => setActiveTab('ai')}
@@ -92,7 +107,6 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                 </button>
             </div>
 
-            {/* КОНТЕНТ ЗАЛЕЖНО ВІД ТАБУ */}
             {activeTab === 'ai' ? (
                 <div className="ai-section-wrapper">
                     <AIBeautyConsultant />
@@ -101,7 +115,7 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                 <div className="appointments-grid">
                     {(activeTab === 'upcoming' ? upcomingApps : archivedApps).length > 0 ? (
                         (activeTab === 'upcoming' ? upcomingApps : archivedApps).map(app => {
-                            const past = isPastAppointment(app.date);
+                            const past = isPastAppointment(app.date, app.time);
                             const isColoring = /фарб|color|dye/i.test(app.service?.name || app.serviceName || "");
                             const isCancelled = app.status === 'cancelled';
                             const displayPrice = app.dyeingDetails?.finalPrice || app.service?.price || 0;
@@ -127,7 +141,7 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                                     </div>
 
                                     {!isCancelled && !past && (
-                                        <button className="pay-btn-luxury" onClick={() => handlePayment(app)}>
+                                        <button className="pay-btn-luxury" onClick={() => setTipMode(app)}>
                                             ОПЛАТИТИ КАРТОЮ
                                         </button>
                                     )}
@@ -157,7 +171,41 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                 </div>
             )}
 
-            {/* МОДАЛКИ (залишаються без змін) */}
+            {tipMode && (
+                <div className="user-modal-overlay" onClick={() => { setTipMode(null); setTipAmount(0); }}>
+                    <div className="luxury-modal tip-modal-compact" onClick={e => e.stopPropagation()}>
+                        <button className="close-x-btn" onClick={() => { setTipMode(null); setTipAmount(0); }}>✕</button>
+
+                        <h4>Чайові майстру? ✨</h4>
+
+                        <div className="tip-row">
+                            {[0, 50, 100].map(val => (
+                                <button
+                                    key={val}
+                                    className={`tip-btn-small ${Number(tipAmount) === val ? 'active' : ''}`}
+                                    onClick={() => setTipAmount(val)}
+                                >
+                                    {val === 0 ? 'Без' : val}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="custom-tip-inline">
+                            <input
+                                type="number"
+                                placeholder="Своя сума..."
+                                value={tipAmount || ''}
+                                onChange={(e) => setTipAmount(e.target.value)}
+                            />
+                        </div>
+
+                        <button className="pay-final-btn-compact" onClick={() => handlePayment(tipMode)}>
+                            Оплатити {Number(tipMode.dyeingDetails?.finalPrice || tipMode.service?.price || 0) + Number(tipAmount)} ₴
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {selectedApp && (
                 <div className="user-modal-overlay" onClick={() => setSelectedApp(null)}>
                     <div className="luxury-modal" onClick={e => e.stopPropagation()}>
@@ -171,14 +219,12 @@ export const UserDashboard = ({ appointments, refreshData }) => {
                                 <label>Процедура</label>
                                 <span>{selectedApp.service?.name || selectedApp.serviceName}</span>
                             </div>
-
                             {selectedApp.clientWishes && (
                                 <div className="info-row wishes-highlight">
                                     <label>Ваш запит на колір</label>
                                     <span className="wish-text">"{selectedApp.clientWishes}"</span>
                                 </div>
                             )}
-
                             {selectedApp.dyeingDetails?.finalPrice ? (
                                 <div className="dyeing-results">
                                     <div className="info-row">
