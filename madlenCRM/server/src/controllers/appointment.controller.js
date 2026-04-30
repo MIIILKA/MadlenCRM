@@ -42,26 +42,37 @@ exports.getBookedSlots = async (req, res) => {
 };
 // 2. Створити новий запис
 // 2. Створити новий запис (підтримує і клієнтський запис, і ручний з календаря)
+// 2. Створити новий запис (Виправлено: додано clientWishes)
 exports.createAppointment = async (req, res) => {
     try {
-        // Отримуємо client з тіла запиту (його пришле фронтенд)
-        const { staff, service, client, clientName, phone, date, time, comment } = req.body;
+        const {
+            staff,
+            service,
+            client,
+            clientName,
+            clientWishes, // Витягуємо з запиту
+            phone,
+            date,
+            time,
+            comment,
+            duration
+        } = req.body;
 
         const [selectedService, staffMember] = await Promise.all([
-            Service.findById(service),
+            service ? Service.findById(service) : null,
             Staff.findById(staff)
         ]);
 
-        if (!selectedService) return res.status(404).json({ message: "Послугу не знайдено" });
+        if (!staffMember) return res.status(404).json({ message: "Майстра не знайдено" });
 
-        // Рахуємо тривалість на основі спеціалізації майстра
-        const sId = selectedService._id.toString();
-        const finalDuration = Number(staffMember?.specializations?.[sId]) || Number(selectedService.duration) || 20;
+        const sId = selectedService?._id?.toString();
+        const finalDuration = Number(duration) ||
+            Number(staffMember?.specializations?.[sId]) ||
+            Number(selectedService?.duration) || 60;
 
         const startNew = timeToMinutes(time);
         const endNew = startNew + finalDuration;
 
-        // Перевірка на накладки
         const existingApps = await Appointment.find({
             staff,
             date,
@@ -73,38 +84,31 @@ exports.createAppointment = async (req, res) => {
             const appEnd = appStart + (Number(app.duration) || 20);
             const isOver = startNew < appEnd && endNew > appStart;
 
-
             if (isOver) {
+                if (!selectedService) return true;
+                if (!app.service) return true;
                 const name1 = (selectedService.name || "").toLowerCase();
-                const name2 = (app.service?.name || "").toLowerCase();
-
-                // Якщо хоча б одна послуга — манікюр/візаж/стрижка, накладка ЗАБОРОНЕНА
-                const isStrict = /манікюр|візаж|стриж|makeup|manicure/i.test(name1) ||
-                    /манікюр|візаж|стриж|makeup|manicure/i.test(name2);
-                if (isStrict) return true;
-
-                // Дозволяємо тільки якщо обидва — фарбування
-                const isDye1 = /фарб|color|dye/i.test(name1);
-                const isDye2 = /фарб|color|dye/i.test(name2);
-                return !(isDye1 && isDye2);
+                const name2 = (app.service.name || "").toLowerCase();
+                if (/фарб|color|dye/i.test(name1) || /фарб|color|dye/i.test(name2)) return false;
+                return true;
             }
             return false;
         });
 
-        if (hasOverlap) return res.status(400).json({ message: "Цей час уже зайнятий!" });
+        if (hasOverlap) return res.status(400).json({ message: "Накладка! Перевірте графік." });
 
-        // СТВОРЕННЯ ОБ'ЄКТА
         const newAppointment = new Appointment({
             staff,
-            service,
+            service: service || null,
             client: client || null,
-            clientName,
-            phone,
+            clientName: clientName || (service ? "Клієнт" : "ТЕХНІЧНА ПЕРЕРВА"),
+            clientWishes: clientWishes || "", // Зберігаємо в базу
+            phone: phone || "0000000000",
             date,
             time,
-            comment,
+            comment: comment || "",
             duration: finalDuration,
-            category: selectedService.category || 'other',
+            category: selectedService?.category || '600000000000000000000001',
             status: 'pending'
         });
 
@@ -112,9 +116,64 @@ exports.createAppointment = async (req, res) => {
         res.status(201).json(newAppointment);
     } catch (error) {
         console.error("CREATE ERROR:", error);
-        res.status(500).json({ message: "Помилка сервера" });
+        res.status(500).json({ message: "Помилка сервера", error: error.message });
     }
 };
+
+// 7. Отримати всі записи для календаря (Виправлено: додано clientWishes у мапінг)
+exports.getAllAppointments = async (req, res) => {
+    try {
+        const appointments = await Appointment.find()
+            .populate('staff')
+            .populate({
+                path: 'service',
+                populate: {
+                    path: 'category',
+                    select: 'name color slug'
+                }
+            })
+            .populate('client', 'name phone');
+
+        const formatted = appointments.map(app => {
+            const hasService = !!app.service;
+            const sId = hasService ? (app.service?._id?.toString() || app.service?.toString()) : null;
+            const specs = app.staff?.specializations || {};
+            const masterDuration = sId ? specs[sId] : null;
+
+            const finalDuration = Number(app.duration) ||
+                Number(masterDuration) ||
+                Number(app.service?.duration) || 60;
+
+            return {
+                _id: app._id,
+                staffId: app.staff?._id || null,
+                staff: app.staff,
+                date: app.date,
+                time: app.time,
+                status: app.status,
+                duration: finalDuration,
+                clientName: app.clientName || app.client?.name || 'Блок/Пауза',
+                clientWishes: app.clientWishes || "", // Тепер прокидаємо на фронтенд
+                phone: app.phone || app.client?.phone || '',
+                comment: app.comment || '',
+                serviceName: hasService ? app.service.name : 'ТЕХНІЧНА ПЕРЕРВА',
+                categoryName: hasService ? app.service.category?.name : 'Перерва',
+                serviceId: sId,
+                categoryColor: hasService ? (app.service.category?.color || '#D4AF37') : '#555555',
+                masterName: app.staff?.name || 'Майстер',
+                masterRole: app.staff?.role || '',
+                dyeingDetails: app.dyeingDetails || null
+            };
+        });
+
+        res.status(200).json(formatted);
+    } catch (err) {
+        console.error("ERROR IN getAllAppointments:", err);
+        res.status(500).json({ message: "Помилка сервера", error: err.message });
+    }
+};
+
+
 
 
 
@@ -231,10 +290,9 @@ webpush.setVapidDetails(
 exports.updateAppointment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { staff, time, date, status, duration } = req.body;
+        const { staff, time, date, status, duration, dyeingDetails } = req.body;
 
-        // Якщо це просто зміна статусу — оновлюємо одразу без перевірок
-        if (status && !time && !staff) {
+        if (status && !time && !staff && !dyeingDetails) {
             const updated = await Appointment.findByIdAndUpdate(
                 id,
                 { $set: { status } },
@@ -249,103 +307,82 @@ exports.updateAppointment = async (req, res) => {
         const sId = movingApp.service?._id?.toString();
         const movingDuration = Number(movingApp.staff?.specializations?.[sId]) || Number(duration) || Number(movingApp.duration) || 20;
 
-        const startNew = timeToMinutes(time);
+        const startNew = timeToMinutes(time || movingApp.time);
         const endNew = startNew + movingDuration;
 
-        const dayApps = await Appointment.find({
-            staff, date, _id: { $ne: id }, status: { $ne: 'cancelled' }
-        }).populate('service');
+        if (time || staff || date) {
+            const dayApps = await Appointment.find({
+                staff: staff || movingApp.staff,
+                date: date || movingApp.date,
+                _id: { $ne: id },
+                status: { $ne: 'cancelled' }
+            }).populate('service');
 
-        const hasOverlap = dayApps.some(app => {
-            const appDuration = Number(app.duration) || 20;
-            const startExisting = timeToMinutes(app.time);
-            const endExisting = startExisting + appDuration;
+            const hasOverlap = dayApps.some(app => {
+                const appDuration = Number(app.duration) || 20;
+                const startExisting = timeToMinutes(app.time);
+                const endExisting = startExisting + appDuration;
 
-            const isOverlapping = startNew < endExisting && endNew > startExisting;
+                // 1. Час, куди ми хочемо поставити запис
+                const movingTime = time || movingApp.time;
 
-            if (isOverlapping) {
-                const name1 = (movingApp.service?.name || "").toLowerCase();
-                const name2 = (app.service?.name || "").toLowerCase();
-                const isDye1 = /фарб|color|dye/i.test(name1);
-                const isDye2 = /фарб|color|dye/i.test(name2);
-                if (isDye1 && isDye2) return false;
-                return true;
+                // 2. ЖОРСТКА ЗАБОРОНА: Не можна ставити два записи на ОДНУ І ТУ САМУ хвилину початку
+                if (app.time === movingTime) return true;
+
+                // 3. ПЕРЕВІРКА ПЕРЕТИНУ (Overlap)
+                const isOverlapping = startNew < endExisting && endNew > startExisting;
+
+                if (isOverlapping) {
+                    const name1 = (movingApp.service?.name || "").toLowerCase();
+                    const name2 = (app.service?.name || "").toLowerCase();
+
+                    const isDye1 = /фарб|color|dye/i.test(name1);
+                    const isDye2 = /фарб|color|dye/i.test(name2);
+
+                    // Дозволяємо перетин тільки якщо хоча б одна з послуг — фарбування
+                    if (isDye1 || isDye2) return false;
+
+                    // Дві стрижки або манікюри одночасно — блокуємо
+                    return true;
+                }
+                return false;
+            });
+
+            if (hasOverlap) {
+                return res.status(400).json({ message: "Накладка! Перевірте графік майстра." });
             }
-            return false;
-        });
-
-        if (hasOverlap) {
-            return res.status(400).json({ message: "Накладка! Манікюр/візаж/стрижка мають бути окремо." });
         }
 
         const updatedApp = await Appointment.findByIdAndUpdate(
             id,
-            { $set: { ...(staff && { staff }), ...(time && { time }), ...(date && { date }), ...(duration && { duration }) } },
+            {
+                $set: {
+                    ...(staff && { staff }),
+                    ...(time && { time }),
+                    ...(date && { date }),
+                    ...(duration && { duration }),
+                    ...(status && { status }),
+                    ...(dyeingDetails && { dyeingDetails })
+                }
+            },
             { new: true }
         ).populate('staff service client');
 
         res.status(200).json(updatedApp);
     } catch (error) {
+        console.error("UPDATE ERROR:", error);
         res.status(500).json({ message: "Помилка сервера", error: error.message });
     }
 };
 
-exports.getAllAppointments = async (req, res) => {
-    try {
-        const appointments = await Appointment.find()
-            .populate('staff') // Важливо: без фільтрації полів!
-            .populate({
-                path: 'service',
-                populate: {
-                    path: 'category',
-                    select: 'name color slug'
-                }
-            })
-            .populate('client', 'name phone');
 
-        const formatted = appointments.map(app => {
-            // 1. Отримуємо ID послуги
-            const sId = app.service?._id?.toString() || app.service?.toString();
 
-            // 2. ДІСТАЄМО ЧАС МАЙСТРА
-            // Важливо: перевіряємо чи існує об'єкт specializations
-            const specs = app.staff?.specializations || {};
-            const masterDuration = specs[sId];
 
-            // 3. ПРІОРИТЕТ: Час майстра -> Час запису -> Час послуги -> 20
-            const finalDuration = Number(masterDuration) || Number(app.duration) || Number(app.service?.duration) || 20;
 
-            // ЛОГ ДЛЯ ТЕБЕ (дивись в консоль бекенда!)
-            if (masterDuration) {
-                console.log(`[OK] Майстер ${app.staff?.name} має спец. час ${masterDuration} для ${sId}`);
-            }
 
-            return {
-                _id: app._id,
-                staffId: app.staff?._id || null,
-                staff: app.staff,
-                date: app.date,
-                time: app.time,
-                status: app.status,
-                duration: finalDuration,
-                clientName: app.clientName || app.client?.name || 'Клієнт',
-                phone: app.phone || app.client?.phone || '',
-                comment: app.comment || '',
-                serviceName: app.service?.name || '—',
-                categoryName: app.service?.category?.name || '—',
-                serviceId: app.service?._id || app.service,
-                categoryColor: app.service?.category?.color || '#D4AF37',
-                masterName: app.staff?.name || 'Майстер',
-                masterRole: app.staff?.role || '',
-            };
-        });
 
-        res.status(200).json(formatted);
-    } catch (err) {
-        console.error("ERROR IN getAllAppointments:", err);
-        res.status(500).json({ message: "Помилка сервера", error: err.message });
-    }
-};
+
+
 
 
 /* exports.getAllAppointments = async (req, res) => {

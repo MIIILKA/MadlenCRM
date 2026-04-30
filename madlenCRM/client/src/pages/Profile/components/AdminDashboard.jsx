@@ -6,24 +6,32 @@ export const AdminDashboard = () => {
     const [stats, setStats] = useState({ totalRevenue: 0, appointmentsCount: 0, activeStaff: 0 });
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [dyePrice, setDyePrice] = useState(15); // Тимчасове значення за
     const [showMaterials, setShowMaterials] = useState(false);
+
+    // ПОВНИЙ ОБ'ЄКТ PRICING З МАСИВОМ PAINTS
     const [pricing, setPricing] = useState({
         dye: 15,
         oxid: 5,
         supplies: 50,
-        // Нові динамічні дані:
+        paints: [], // Тут будуть бренди фарб
         baseGrams: { short: 40, medium: 60, long: 80 },
         densityCoef: { low: 0.8, medium: 1, high: 1.3 },
         techniqueCoef: { "one-tone": 1, "balayage": 1.5, "airtouch": 2 }
-    });    // Модалки
-    const [showManager, setShowManager] = useState(false); // Вікно зі списком
-    const [showEditModal, setShowEditModal] = useState(false); // Вікно створення/редагування
+    });
+
+    const [showManager, setShowManager] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [catForm, setCatForm] = useState({ name: '', color: '#D4AF37', id: null });
     const [showSuccess, setShowSuccess] = useState(false);
 
-
-
+    useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            await Promise.all([fetchAdminData(), fetchPricing()]);
+            setLoading(false);
+        };
+        loadData();
+    }, []);
 
     const fetchAdminData = async () => {
         try {
@@ -39,60 +47,50 @@ export const AdminDashboard = () => {
             });
             setCategories(catRes.data);
         } catch (err) { console.error(err); }
-        finally { setLoading(false); }
     };
-
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            await Promise.all([
-                fetchAdminData(),
-                fetchPricing()
-            ]);
-            setLoading(false);
-        };
-        loadData();
-    }, []); // Викличеться один раз при старті
-
-
-    const handleOpenCreate = () => {
-        setCatForm({ name: '', color: '#D4AF37', id: null });
-        setShowEditModal(true);
-    };
-
-    const handleOpenEdit = (cat) => {
-        setCatForm({ name: cat.name, color: cat.color, id: cat._id });
-        setShowEditModal(true);
-    };
-
 
     const fetchPricing = async () => {
         try {
             const res = await api.get('/paint-settings');
             if (res.data && res.data.pricing) {
-                // Зберігаємо ПОВНИЙ об'єкт pricing зі всіма вкладеними полями
-                setPricing(res.data.pricing);
+                // Гарантуємо, що paints завжди масив, навіть якщо в базі порожньо
+                setPricing({
+                    ...res.data.pricing,
+                    paints: res.data.pricing.paints || []
+                });
             }
-        } catch (err) {
-            console.error("Помилка завантаження прайсу:", err);
-        }
+        } catch (err) { console.error("Помилка завантаження прайсу:", err); }
     };
+
     const handleSavePricing = async () => {
         try {
-            // Відправляємо весь об'єкт pricing
             const response = await api.put('/paint-settings', pricing);
-
             setShowSuccess(true);
-            if (response.data.pricing) {
-                setPricing(response.data.pricing);
-            }
+            if (response.data.pricing) setPricing(response.data.pricing);
         } catch (err) {
             console.error("Помилка збереження:", err);
-            alert("Помилка при збереженні налаштувань");
+            alert("Помилка при збереженні");
         }
     };
 
+    // ФУНКЦІЇ ДЛЯ УПРАВЛІННЯ БРЕНДАМИ ФАРБ
+    const addPaintBrand = () => {
+        setPricing({
+            ...pricing,
+            paints: [...pricing.paints, { name: '', price: pricing.dye }]
+        });
+    };
 
+    const updatePaintBrand = (index, field, value) => {
+        const newPaints = [...pricing.paints];
+        newPaints[index][field] = field === 'price' ? Number(value) : value;
+        setPricing({ ...pricing, paints: newPaints });
+    };
+
+    const removePaintBrand = (index) => {
+        const newPaints = pricing.paints.filter((_, i) => i !== index);
+        setPricing({ ...pricing, paints: newPaints });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -145,16 +143,11 @@ export const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* Керування */}
             <div className="admin-dash__controls">
                 <h3>Керування системою</h3>
 
-
                 <div className="admin-dash__section">
-                    <button
-                        className={`materials-toggle ${showMaterials ? 'active' : ''}`}
-                        onClick={() => setShowMaterials(!showMaterials)}
-                    >
+                    <button className={`materials-toggle ${showMaterials ? 'active' : ''}`} onClick={() => setShowMaterials(!showMaterials)}>
                         <div className="left">
                             <span className="material-symbols-rounded">payments</span>
                             <span>Налаштування вартості матеріалів</span>
@@ -164,119 +157,144 @@ export const AdminDashboard = () => {
 
                     {showMaterials && (
                         <div className="materials-dropdown-panel">
-                            {/* Секція 1: Базові ціни */}
+                            {/* 1. БРЕНДИ ФАРБ ТА ЦІНИ */}
                             <div className="admin-config-section">
-                                <h4 className="config-title">💰 Вартість сировини та витрат</h4>
-                                <div className="config-grid">
-                                    <div className="config-item">
-                                        <label>Фарба (1г)</label>
-                                        <div className="input-group">
-                                            <input type="number" value={pricing.dye} onChange={e => setPricing({...pricing, dye: Number(e.target.value)})} />
-                                            <span className="unit">₴</span>
+                                <h4 className="config-title">
+                                    <span className="material-symbols-rounded">palette</span>
+                                    Бренди фарб та ціни
+                                </h4>
+
+                                <div className="paint-brands-list">
+                                    {pricing.paints.map((paint, index) => (
+                                        <div key={index} className="paint-brand-row">
+                                            <input
+                                                className="brand-name-input"
+                                                placeholder="Назва (напр. Matrix)"
+                                                value={paint.name}
+                                                onChange={(e) => updatePaintBrand(index, 'name', e.target.value)}
+                                            />
+                                            <div className="brand-price-group">
+                                                <input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={paint.price}
+                                                    onChange={(e) => updatePaintBrand(index, 'price', e.target.value)}
+                                                />
+                                                <span className="unit">₴</span>
+                                            </div>
+                                            <button
+                                                className="brand-del-btn"
+                                                onClick={() => removePaintBrand(index)}
+                                                title="Видалити бренд"
+                                            >
+                                                <span className="material-symbols-rounded">delete</span>
+                                            </button>
                                         </div>
-                                    </div>
+                                    ))}
+
+                                    <button className="add-brand-btn" onClick={addPaintBrand}>
+                                        <span className="material-symbols-rounded">add_circle</span>
+                                        Додати новий бренд
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 2. ДОДАТКОВІ ВИТРАТИ */}
+                            <div className="admin-config-section">
+                                <h4 className="config-title">
+                                    <span className="material-symbols-rounded">payments</span>
+                                    Додаткові витрати
+                                </h4>
+                                <div className="config-grid">
                                     <div className="config-item">
                                         <label>Окисник (1г)</label>
                                         <div className="input-group">
-                                            <input type="number" value={pricing.oxid} onChange={e => setPricing({...pricing, oxid: Number(e.target.value)})} />
+                                            <input
+                                                type="number"
+                                                value={pricing.oxid}
+                                                onChange={e => setPricing({...pricing, oxid: Number(e.target.value)})}
+                                            />
                                             <span className="unit">₴</span>
                                         </div>
                                     </div>
                                     <div className="config-item">
                                         <label>Тех. набір (фікс)</label>
                                         <div className="input-group">
-                                            <input type="number" value={pricing.supplies} onChange={e => setPricing({...pricing, supplies: Number(e.target.value)})} />
+                                            <input
+                                                type="number"
+                                                value={pricing.supplies}
+                                                onChange={e => setPricing({...pricing, supplies: Number(e.target.value)})}
+                                            />
                                             <span className="unit">₴</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Секція 2: Норми витрат фарби */}
-                            <div className="admin-config-section" style={{marginTop: '25px'}}>
-                                <h4 className="config-title">📏 Базова витрата фарби (г)</h4>
+                            {/* 3. НОРМИ ВИТРАТ */}
+                            <div className="admin-config-section" style={{ marginTop: '25px' }}>
+                                <h4 className="config-title">
+                                    <span className="material-symbols-rounded">straighten</span>
+                                    Базова витрата (для авто-прогнозів)
+                                </h4>
                                 <div className="config-grid">
                                     <div className="config-item">
-                                        <label>Коротке (S)</label>
-                                        <input
-                                            type="number"
-                                            value={pricing?.baseGrams?.short ?? 0}
-                                            onChange={e => setPricing({
-                                                ...pricing,
-                                                baseGrams: { ...(pricing?.baseGrams || {}), short: Number(e.target.value) }
-                                            })}
-                                        />
+                                        <label>S (Коротке)</label>
+                                        <div className="input-group">
+                                            <input
+                                                type="number"
+                                                value={pricing.baseGrams.short}
+                                                onChange={e => setPricing({
+                                                    ...pricing,
+                                                    baseGrams: {...pricing.baseGrams, short: Number(e.target.value)}
+                                                })}
+                                            />
+                                            <span className="unit">г</span>
+                                        </div>
                                     </div>
-
                                     <div className="config-item">
-                                        <label>Середнє (M)</label>
-                                        <input
-                                            type="number"
-                                            value={pricing?.baseGrams?.medium ?? 0}
-                                            onChange={e => setPricing({
-                                                ...pricing,
-                                                baseGrams: { ...(pricing?.baseGrams || {}), medium: Number(e.target.value) }
-                                            })}
-                                        />
+                                        <label>M (Середнє)</label>
+                                        <div className="input-group">
+                                            <input
+                                                type="number"
+                                                value={pricing.baseGrams.medium}
+                                                onChange={e => setPricing({
+                                                    ...pricing,
+                                                    baseGrams: {...pricing.baseGrams, medium: Number(e.target.value)}
+                                                })}
+                                            />
+                                            <span className="unit">г</span>
+                                        </div>
                                     </div>
-
                                     <div className="config-item">
-                                        <label>Довге (L)</label>
-                                        <input
-                                            type="number"
-                                            value={pricing?.baseGrams?.long ?? 0}
-                                            onChange={e => setPricing({
-                                                ...pricing,
-                                                baseGrams: { ...(pricing?.baseGrams || {}), long: Number(e.target.value) }
-                                            })}
-                                        />
+                                        <label>L (Довге)</label>
+                                        <div className="input-group">
+                                            <input
+                                                type="number"
+                                                value={pricing.baseGrams.long}
+                                                onChange={e => setPricing({
+                                                    ...pricing,
+                                                    baseGrams: {...pricing.baseGrams, long: Number(e.target.value)}
+                                                })}
+                                            />
+                                            <span className="unit">г</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-
-
-                            {/* Секція 3: Складність технік */}
-                            <div className="admin-config-section" style={{marginTop: '25px'}}>
-                                <h4 className="config-title">🚀 Множники технік (коефіцієнт)</h4>
-                                <div className="config-grid">
-                                    <div className="config-item">
-                                        <label>В один тон</label>
-                                        <input type="number" step="0.1" value={pricing.techniqueCoef["one-tone"]}
-                                               onChange={e => setPricing({...pricing, techniqueCoef: {...pricing.techniqueCoef, "one-tone": Number(e.target.value)}})} />
-                                    </div>
-                                    <div className="config-item">
-                                        <label>Балаяж</label>
-                                        <input type="number" step="0.1" value={pricing.techniqueCoef.balayage}
-                                               onChange={e => setPricing({...pricing, techniqueCoef: {...pricing.techniqueCoef, balayage: Number(e.target.value)}})} />
-                                    </div>
-                                    <div className="config-item">
-                                        <label>Airtouch</label>
-                                        <input
-                                            type="number"
-                                            step="0.1"
-                                            value={pricing?.techniqueCoef?.airtouch ?? 0}
-                                            onChange={e => setPricing({
-                                                ...pricing,
-                                                techniqueCoef: { ...(pricing?.techniqueCoef || {}), airtouch: Number(e.target.value) }
-                                            })}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="formula-preview" style={{marginTop: '25px'}}>
+                            {/* ПІДКАЗКА АЛГОРИТМУ */}
+                            <div className="formula-preview" style={{ marginTop: '20px' }}>
                                 <span className="material-symbols-rounded">auto_awesome</span>
-                                <p>Система автоматично розрахує вагу суміші та фінальний чек на основі цих значень.</p>
+                                <p>На основі цих даних система формує <b>динамічний прайс</b> для кожного фарбування індивідуально.</p>
                             </div>
 
                             <button className="save-materials-btn" onClick={handleSavePricing}>
-                                Зберегти налаштування алгоритму
+                                Зберегти всі налаштування алгоритму
                             </button>
                         </div>
                     )}
                 </div>
-
 
                 <div className="controls-grid">
                     <button className="control-btn" onClick={() => window.location.href='/calendar'}>
@@ -290,7 +308,7 @@ export const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* 1. Модалка-менеджер (Список) */}
+            {/* Решта твоїх модалок (Manager, Edit, Success) */}
             {showManager && (
                 <div className="modal-overlay" onClick={() => setShowManager(false)}>
                     <div className="modal-box manager-modal" onClick={e => e.stopPropagation()}>
@@ -301,22 +319,20 @@ export const AdminDashboard = () => {
                             </div>
                             <button className="close-x" onClick={() => setShowManager(false)}>✕</button>
                         </div>
-
                         <div className="manager-content">
-                            <button className="add-new-inline" onClick={handleOpenCreate}>
+                            <button className="add-new-inline" onClick={() => { setCatForm({ name: '', color: '#D4AF37', id: null }); setShowEditModal(true); }}>
                                 <span className="material-symbols-rounded">add</span> Додати нову категорію
                             </button>
-
                             <div className="cat-list-scroll">
                                 {categories.map(cat => (
                                     <div key={cat._id} className="cat-manage-item">
                                         <div className="color-dot" style={{ backgroundColor: cat.color }}></div>
                                         <span className="name">{cat.name}</span>
                                         <div className="actions">
-                                            <button onClick={() => handleOpenEdit(cat)} title="Редагувати">
+                                            <button onClick={() => { setCatForm({ name: cat.name, color: cat.color, id: cat._id }); setShowEditModal(true); }}>
                                                 <span className="material-symbols-rounded">edit</span>
                                             </button>
-                                            <button onClick={() => handleDelete(cat._id)} title="Видалити" className="del-btn">
+                                            <button onClick={() => handleDelete(cat._id)} className="del-btn">
                                                 <span className="material-symbols-rounded">delete</span>
                                             </button>
                                         </div>
@@ -328,7 +344,6 @@ export const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* 2. Модалка створення/редагування (другий рівень) */}
             {showEditModal && (
                 <div className="modal-overlay secondary" onClick={() => setShowEditModal(false)}>
                     <div className="modal-box admin-modal" onClick={e => e.stopPropagation()}>
@@ -339,17 +354,11 @@ export const AdminDashboard = () => {
                         <form className="modal-box__body modern-form" onSubmit={handleSubmit}>
                             <div className="calc-field">
                                 <span>Назва</span>
-                                <input
-                                    type="text" className="calc-input" required
-                                    value={catForm.name}
-                                    onChange={e => setCatForm({...catForm, name: e.target.value})}
-                                />
+                                <input type="text" className="calc-input" required value={catForm.name} onChange={e => setCatForm({...catForm, name: e.target.value})} />
                             </div>
                             <div className="color-picker-row">
                                 <label>Колір в системі</label>
-                                <div className="color-input-wrapper">
-                                    <input type="color" value={catForm.color} onChange={e => setCatForm({...catForm, color: e.target.value})} />
-                                </div>
+                                <input type="color" value={catForm.color} onChange={e => setCatForm({...catForm, color: e.target.value})} />
                             </div>
                             <button type="submit" className="wh-save-btn">
                                 <span className="material-symbols-rounded">done_all</span>
@@ -359,6 +368,7 @@ export const AdminDashboard = () => {
                     </div>
                 </div>
             )}
+
             {showSuccess && (
                 <div className="modal-overlay" onClick={() => setShowSuccess(false)}>
                     <div className="modal-box admin-modal success-modal" onClick={e => e.stopPropagation()}>
@@ -369,20 +379,13 @@ export const AdminDashboard = () => {
                                 <h3>Успішно оновлено</h3>
                             </div>
                         </div>
-
                         <div className="modal-box__body">
-                            <p>Прайс-лист матеріалів успішно збережено.<br/>Дані синхронізовано з календарем.</p>
-                            <button
-                                className="wh-save-btn"
-                                onClick={() => setShowSuccess(false)}
-                            >
-                                Зрозуміло
-                            </button>
+                            <p>Дані успішно збережено та синхронізовано з календарем.</p>
+                            <button className="wh-save-btn" onClick={() => setShowSuccess(false)}>Зрозуміло</button>
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };

@@ -174,7 +174,94 @@
   border: 1px solid $color-gold;
   background: rgba(10, 10, 10, 0.8);
   animation: slideDown 0.3s ease-out;
+  // Секція брендів фарб (image_6c3d98.png)
+  .paint-brands-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
 
+    .paint-brand-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fadeIn 0.3s ease;
+
+      input {
+        background: #000;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: #fff;
+        font-weight: 600;
+        transition: 0.2s;
+
+        &:focus {
+          border-color: $color-gold;
+          outline: none;
+        }
+      }
+
+      // Назва бренду займає більше місця
+      .brand-name-input {
+        flex: 2;
+      }
+
+      // Ціна компактніша
+      .brand-price-group {
+        flex: 1;
+        position: relative;
+        input { width: 100%; padding-right: 30px; color: $color-gold; }
+        .unit {
+          position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+          font-size: 12px; color: rgba($color-gold, 0.5);
+        }
+      }
+
+      // Кнопка видалення (червоний смітник)
+      .brand-del-btn {
+        background: rgba(#ff5e5e, 0.05);
+        border: 1px solid rgba(#ff5e5e, 0.1);
+        color: #ff5e5e;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.2s;
+
+        &:hover {
+          background: #ff5e5e;
+          color: #fff;
+          transform: scale(1.05);
+        }
+      }
+    }
+  }
+
+  // Кнопка "+ Додати бренд"
+  .add-brand-btn {
+    background: rgba($color-gold, 0.05);
+    border: 1px dashed rgba($color-gold, 0.4);
+    color: $color-gold;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+
+    &:hover {
+      background: rgba($color-gold, 0.1);
+      border-style: solid;
+      transform: translateX(5px);
+    }
+  }
   .config-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);

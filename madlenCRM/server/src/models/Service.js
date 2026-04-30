@@ -4,6 +4,7 @@ const serviceSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true },
     duration: { type: Number, required: true },
+    isInternal: { type: Boolean, default: false },
     // ЗАМІСТЬ ENUM СТАВИМО ПОСИЛАННЯ НА МОДЕЛЬ CATEGORY
     category: {
         type: mongoose.Schema.Types.ObjectId,
