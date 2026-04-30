@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api from '../../../api'; // Переконайся, що шлях до axios інстансу правильний
+import api from '../../../api';
 import './AIBeauty.scss';
 
 export const AIBeautyConsultant = () => {
@@ -11,8 +11,10 @@ export const AIBeautyConsultant = () => {
 
     const handleFileChange = (e) => {
         const selected = e.target.files[0];
-        setFile(selected);
-        setPreview(URL.createObjectURL(selected));
+        if (selected) {
+            setFile(selected);
+            setPreview(URL.createObjectURL(selected));
+        }
     };
 
     const getAdvice = async () => {
@@ -26,9 +28,13 @@ export const AIBeautyConsultant = () => {
 
         try {
             const res = await api.post('/ai/analyze', formData);
-            setAdvice(res.data.advice);
+
+            // Чистимо текст від можливих залишків розмітки ШІ
+            const cleanText = res.data.advice.replace(/[\*\#]/g, '');
+            setAdvice(cleanText);
+
         } catch (err) {
-            setAdvice("Сталася помилка. Перевірте з'єднання або спробуйте інше фото.");
+            setAdvice("Слухай, щось сервіс приліг. Спробуй ще раз за хвилину!");
         } finally {
             setLoading(false);
         }
@@ -41,7 +47,7 @@ export const AIBeautyConsultant = () => {
                 <h3>Madlen AI Стиліст</h3>
             </div>
 
-            <p className="ai-desc">Завантажте фото, і наш ШІ підбере ідеальний образ саме для вас.</p>
+            <p className="ai-desc">Завантаж фото, і я підкажу, що тобі намутити зі стилем.</p>
 
             <div className="category-tabs">
                 {['hair', 'color', 'nails'].map(t => (
@@ -62,7 +68,7 @@ export const AIBeautyConsultant = () => {
                     <label className="file-label">
                         <input type="file" onChange={handleFileChange} accept="image/*" hidden />
                         <span className="material-symbols-rounded">add_a_photo</span>
-                        <p>Натисніть, щоб додати фото</p>
+                        <p>Додай своє фото</p>
                     </label>
                 )}
             </div>
@@ -72,13 +78,15 @@ export const AIBeautyConsultant = () => {
                 onClick={getAdvice}
                 disabled={!file || loading}
             >
-                {loading ? 'Аналізую вашу красу...' : 'Отримати пораду'}
+                {loading ? 'Дивлюсь...' : 'Отримати пораду'}
             </button>
 
             {advice && (
                 <div className="ai-response-box">
-                    <div className="ai-badge">Порада ШІ</div>
-                    <p>{advice}</p>
+                    <div className="ai-badge">Порада від бро</div>
+                    <p style={{ whiteSpace: 'pre-line', lineHeight: '1.5' }}>
+                        {advice}
+                    </p>
                     <button className="book-shortcut" onClick={() => window.location.href='/booking'}>
                         Записатись на цей образ
                     </button>

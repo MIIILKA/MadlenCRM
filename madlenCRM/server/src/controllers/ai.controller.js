@@ -4,44 +4,48 @@ const fs = require("fs");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 exports.getBeautyAdvice = async (req, res) => {
+    console.log("\n--- 🚀 ЗАПУСК ЗАПИТУ ---");
 
     try {
-        if (!req.file) return res.status(400).json({ message: "Будь ласка, завантажте фото" });
+        if (!req.file) return res.status(400).json({ error: "Файл не отримано" });
 
-        const { category } = req.body;
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const fileBuffer = fs.readFileSync(req.file.path);
+        const base64Image = fileBuffer.toString("base64");
 
-        const imageData = {
-            inlineData: {
-                data: Buffer.from(fs.readFileSync(req.file.path)).toString("base64"),
-                mimeType: req.file.mimetype,
-            },
-        };
+        // ВИКОРИСТОВУЄМО ТІЛЬКИ ЦЮ НАЗВУ
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-        let dynamicPrompt = "";
-        if (category === 'nails') {
-            dynamicPrompt = `Ти експерт з манікюру салону "Madlen". Проаналізуй фото рук. Порадь ідеальну форму нігтів та колір/дизайн, враховуючи довжину пальців та тон шкіри.`;
-        } else if (category === 'color') {
-            dynamicPrompt = `Ти топ-колорист "Madlen". Проаналізуй обличчя на фото. Порадь техніку фарбування та конкретні відтінки, які підкреслять колір очей та підтон шкіри.`;
-        } else {
-            dynamicPrompt = `Ти стиліст-перукар "Madlen". Проаналізуй форму обличчя на фото. Порадь найкращу стрижку, яка збалансує риси обличчя.`;
-        }
 
+        const prompt = `Ти свій чувак, крутий барбер/стиліст із Madlen. 
+Аналізуй фото за категорією: ${req.body.category || 'загальне'}.
+
+Дай дружню пораду в 2-3 реченнях. Пиши просто, без офіціозу і БЕЗ жодних символів розмітки (ніяких зірочок, решіток тощо).
+Просто текст, як у месенджері. 
+
+Наприклад: "Слухай, у тебе крута густота, але цей довгий чубчик трохи закриває обличчя. Спробуй текстурований кроп і фейд на скронях — буде виглядати набагато свіжіше!"`;
         const result = await model.generateContent([
-            `${dynamicPrompt} Пиши українською мовою, аргументуй пораду професійно, але лаконічно.`,
-            imageData
+            prompt,
+            {
+                inlineData: {
+                    data: base64Image,
+                    mimeType: req.file.mimetype
+                }
+            }
         ]);
 
-        const response = await result.response;
+        const text = result.response.text();
 
-        // Видаляємо тимчасовий файл
-        if (fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-        res.json({ advice: response.text() });
+        res.json({ advice: text });
+
     } catch (error) {
-        console.error("AI Error:", error);
-        res.status(500).json({ message: "Помилка ШІ-аналізу" });
+        console.error("❌ ПОМИЛКА ШІ:", error.message);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+        res.status(500).json({
+            error: "Помилка ШІ",
+            details: error.message
+        });
     }
 };

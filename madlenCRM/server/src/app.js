@@ -8,10 +8,15 @@ const categoryRoutes = require('./routes/category.routes');
 const settingsRoutes = require('./routes/paintSetting.routes');
 const paymentRoutes = require('./routes/payment.routes.js');
 const app = express();
-app.use('/api/ai', require('./routes/ai.routes'));
-// 1. Мідлвари
+const fs = require('fs');
+const aiRoutes = require('./routes/ai.routes');
+
+const tempPath = path.join(__dirname, 'uploads/temp');
+if (!fs.existsSync(tempPath)) {
+    fs.mkdirSync(tempPath, { recursive: true });
+}
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'https://madlencrm.netlify.app'], // Додай обидва
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -47,7 +52,8 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/paint-settings', require('./routes/paintSetting.routes'));
 app.use('/api/payments', paymentRoutes);
 app.use('/api/ai', require('./routes/ai.routes'));
-// 5. 404
+
+
 app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
 });
