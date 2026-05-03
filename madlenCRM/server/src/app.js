@@ -53,7 +53,6 @@ app.use('/api/paint-settings', require('./routes/paintSetting.routes'));
 app.use('/api/payments', paymentRoutes);
 app.use('/api/ai', require('./routes/ai.routes'));
 
-
 app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
 });
